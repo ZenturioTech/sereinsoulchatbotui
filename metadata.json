@@ -1,0 +1,7 @@
+{
+  "name": "Copy of SereinSoul - Mental Well-being Platform",
+  "description": "A landing page for SereinSoul, an AI-powered digital twin platform for sustainable mental well-being, designed to replicate a given UI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
