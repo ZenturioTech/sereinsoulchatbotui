@@ -25,7 +25,7 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
             className="relative w-full h-[85vh] max-h-[700px] md:h-[720px] bg-cover bg-center text-white p-8 flex flex-col items-center text-center md:flex-row md:items-start md:text-left md:p-12 lg:p-20
             rounded-[2.5rem] md:rounded-[2.5rem] mobile-cutout overflow-hidden"
             style={{
-                backgroundImage: 'url(https://i.ibb.co/WWvw6bXN/ssocean-1.png)'
+                backgroundImage: 'url(/images/ssocean.png)'
             }}
         >
             
