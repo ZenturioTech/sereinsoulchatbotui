@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
@@ -10,34 +10,64 @@ const App: React.FC = () => {
   const [page, setPage] = useState<'home' | 'signIn' | 'chat' | 'subscription'>('home');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Initialize auth and route on first load and handle browser back/forward
+  useEffect(() => {
+    const storedAuth = localStorage.getItem('isAuthenticated') === 'true';
+    setIsAuthenticated(storedAuth);
+    // Always land on home after refresh regardless of auth
+    setPage('home');
+
+    // Set initial history state
+    if (!history.state || history.state.page !== 'home') {
+      history.replaceState({ page: 'home' }, '');
+    }
+
+    const onPopState = (e: PopStateEvent) => {
+      const nextPage = (e.state && e.state.page) || 'home';
+      setPage(nextPage);
+      // Keep auth persisted across navigation
+      setIsAuthenticated(localStorage.getItem('isAuthenticated') === 'true');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const navigate = (nextPage: 'home' | 'signIn' | 'chat' | 'subscription') => {
+    setPage(nextPage);
+    history.pushState({ page: nextPage }, '');
+  };
+
   const handleSignInClick = () => {
-    setPage('signIn');
+    navigate('signIn');
   };
 
   const handleSignInSuccess = () => {
     setIsAuthenticated(true);
-    setPage('chat');
+    localStorage.setItem('isAuthenticated', 'true');
+    navigate('chat');
   };
 
   const handleStartHealing = () => {
     if (isAuthenticated) {
-      setPage('chat');
+      navigate('chat');
     } else {
-      setPage('signIn');
+      navigate('signIn');
     }
   };
   
   const handleSignOut = () => {
     setIsAuthenticated(false);
-    setPage('home');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('phoneNumber');
+    navigate('home');
   };
   
   const handleUpgrade = () => {
-    setPage('subscription');
+    navigate('subscription');
   };
 
   const handleBackToChat = () => {
-    setPage('chat');
+    navigate('chat');
   };
 
 

@@ -9,12 +9,25 @@ const SignInForm: React.FC<SignInFormProps> = ({ onOtpSent }) => {
   const [mobileNumber, setMobileNumber] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (mobileNumber.length === 10) {
       setError(null);
-      console.log('Sending OTP to:', `+91-${mobileNumber}`);
-      onOtpSent(mobileNumber);
+      const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+      try {
+        const res = await fetch(`${apiBase}/api/auth/otp/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone_number: `+91${mobileNumber}` })
+        });
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || 'Failed to send OTP');
+        }
+        onOtpSent(mobileNumber);
+      } catch (err: any) {
+        setError(err?.message || 'Failed to send OTP');
+      }
     } else {
       setError('Please enter a valid 10-digit mobile number.');
     }

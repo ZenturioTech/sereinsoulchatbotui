@@ -18,14 +18,27 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
     setOtp(e.target.value.replace(/\D/g, ''));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length === 6) {
-      setError(null);
-      console.log('Verifying OTP:', otp);
-      onVerify();
-    } else {
+    if (otp.length !== 6) {
       setError('Please enter a valid 6-digit OTP.');
+      return;
+    }
+    setError(null);
+    const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+    try {
+      const res = await fetch(`${apiBase}/api/auth/otp/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: `+91${mobileNumber}`, code: otp })
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'Invalid or expired OTP');
+      }
+      onVerify();
+    } catch (err: any) {
+      setError(err?.message || 'Invalid or expired OTP');
     }
   };
 
@@ -74,7 +87,27 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
       <div className="text-center mt-6 text-sm">
         <p className="text-gray-500">
           Didn't receive code?{' '}
-          <button className="font-semibold text-blue-500 hover:underline">
+          <button
+            type="button"
+            className="font-semibold text-blue-500 hover:underline"
+            onClick={async () => {
+              setError(null);
+              const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+              try {
+                const res = await fetch(`${apiBase}/api/auth/otp/send`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ phone_number: `+91${mobileNumber}` })
+                });
+                if (!res.ok) {
+                  const msg = await res.text();
+                  throw new Error(msg || 'Failed to resend OTP');
+                }
+              } catch (err: any) {
+                setError(err?.message || 'Failed to resend OTP');
+              }
+            }}
+          >
             Resend OTP
           </button>
         </p>

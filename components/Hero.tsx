@@ -25,7 +25,7 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
             className="relative w-full h-[85vh] max-h-[700px] md:h-[720px] bg-cover bg-center text-white p-8 flex flex-col items-center text-center md:flex-row md:items-start md:text-left md:p-12 lg:p-20
             rounded-[2.5rem] md:rounded-[2.5rem] mobile-cutout overflow-hidden"
             style={{
-                backgroundImage: 'url(/images/ssocean.png)'
+                backgroundImage: 'url(https://i.ibb.co/WWvw6bXN/ssocean-1.png)'
             }}
         >
             
@@ -40,7 +40,7 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
 
             <div className="absolute inset-0 z-0">
                 {/* Character Image and Aura Effect */}
-                <div className="absolute bottom-0 md:bottom-0 left-1/2 -translate-x-1/2 h-[70%] w-auto md:left-auto md:translate-x-0 md:right-0 lg:right-20 md:h-[90%] pointer-events-none flex items-end md:items-center justify-center md:left-[50%]">
+                <div className="absolute bottom-0 md:bottom-0 left-1/2 -translate-x-1/2 h-[70%] w-auto md:left-auto md:translate-x-0 md:right-0 lg:right-20 md:h-[90%] pointer-events-none flex items-end md:items-center justify-center ">
                     {/* Aura circles for desktop */}
                     <div className="hidden md:block absolute w-[400px] h-[400px] bg-white/5 rounded-full"></div>
                     <div className="hidden md:block absolute w-[550px] h-[550px] bg-white/5 rounded-full"></div>
@@ -49,7 +49,7 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
                     <img 
                         src="https://i.ibb.co/DPv8sR0J/imag.png"
                         alt="AI Assistant"
-                        className="relative w-auto h-full object-bottom object-contain left-[32%] md:left-[2%]"
+                        className="relative w-auto h-full object-bottom object-contain left-[32%] md:left-[12%]"
                     />
                 </div>
 
@@ -60,7 +60,7 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
                 <FloatingIconButton icon={<GameIcon />} className="bottom-[35%] right-[3%] md:hidden" />
                 
                 {/* Desktop Icon Positions */}
-                <FloatingIconButton icon={<YogaIcon />} className="hidden md:flex top-[15%] right-[40%]" />
+                <FloatingIconButton icon={<YogaIcon />} className="hidden md:flex top-[15%] right-[30%]" />
                 <FloatingIconButton icon={<BookIcon />} className="hidden md:flex top-[30%] right-[8%]" />
                 <FloatingIconButton icon={<ChatIcon />} className="hidden md:flex bottom-[35%] right-[40%]" />
                 <FloatingIconButton icon={<GameIcon />} className="hidden md:flex bottom-[18%] right-[5%]" />

@@ -8,6 +8,7 @@ import ImageIcon from '../components/icons/ImageIcon';
 import CameraIcon from '../components/icons/CameraIcon';
 import EmojiPicker from '../components/EmojiPicker';
 
+
 interface ChatPageProps {
     onUpgrade: () => void;
 }
@@ -18,27 +19,52 @@ interface Message {
 }
 
 const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
-    const avatarSrc = "images/ssgirl1.png";
-
-    // Mock AI replies
-    const mockReplies = [
-        "That sounds interesting! Tell me more.",
-        "I'm glad you shared that with me 😊",
-        "Hmm, how does that make you feel?",
-        "I understand. Do you want to talk about it?",
-        "Wow! That’s exciting 🎉",
-    ];
-
+    // Base64 encoded placeholder for the avatar image to avoid external dependencies.
+    const avatarSrc = "images/ssgirl1.png"
     const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
     const [message, setMessage] = useState('');
-    const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: "Hello! How are you feeling today?" },
-        { role: 'user', content: "I'm feeling good, thanks!" },
-        { role: 'assistant', content: "That's wonderful! Do you have any plans for today?" }
-    ]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showTypingIntro, setShowTypingIntro] = useState(true);
+    const [messages, setMessages] = useState<Message[]>([]);
+    
+    useEffect(() => {
+        // Show typing first, then display the intro message
+        const init = async () => {
+            setShowTypingIntro(true);
+            try {
+                const phoneNumber = localStorage.getItem('phoneNumber');
+                const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+                const res = await fetch(`${apiBase}/api/chat/chat/intro`, {
+                    method: 'GET',
+                    headers: {
+                        'phone-number': phoneNumber || ''
+                    }
+                });
+                const intro = res.ok ? await res.json() : { role: 'assistant', content: "I'm here with you. How are you feeling today?" };
+                // small delay to let typing show first
+                setTimeout(() => {
+                    if (intro && (intro.role === 'assistant' || intro.role === 'system')) {
+                        setMessages([intro]);
+                    } else {
+                        setMessages([{ role: 'assistant', content: "I'm here with you. How are you feeling today?" }]);
+                    }
+                    setShowTypingIntro(false);
+                }, 900);
+            } catch {
+                setTimeout(() => {
+                    setMessages([{ role: 'assistant', content: "I'm here with you. How are you feeling today?" }]);
+                    setShowTypingIntro(false);
+                }, 900);
+            } finally {
+                localStorage.removeItem('chatMessages');
+                localStorage.removeItem('chatLastAt');
+            }
+        };
+        init();
+    }, []);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
-
+    
     const fileInputRef = useRef<HTMLInputElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,46 +77,52 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
         scrollToBottom();
     }, [messages]);
 
+    // Intro typing is controlled by the intro fetch effect; no standalone timer here
+
     useEffect(() => {
         const handleResize = () => {
             if (window.visualViewport) {
                 const viewport = window.visualViewport;
                 setViewportHeight(viewport.height);
-
+                
+                // Update header position when keyboard shows/hides
                 const header = document.querySelector('header');
                 const main = document.querySelector('main');
                 const footer = document.querySelector('footer');
-
+                
                 if (header && main && footer) {
                     const offsetTop = viewport.offsetTop;
                     const scale = viewport.scale;
-
-                    (header as HTMLElement).style.transform = `translateY(${offsetTop}px) scale(${scale})`;
-                    (header as HTMLElement).style.position = 'fixed';
-
-                    (main as HTMLElement).style.top = `${offsetTop + 72}px`;
-                    (main as HTMLElement).style.bottom = '80px';
-                    (main as HTMLElement).style.position = 'fixed';
-
-                    (footer as HTMLElement).style.position = 'fixed';
-                    (footer as HTMLElement).style.bottom = '0';
+                    
+                    header.style.transform = `translateY(${offsetTop}px) scale(${scale})`;
+                    header.style.position = 'fixed';
+                    
+                    main.style.top = `${offsetTop + 72}px`; // 72px is header height
+                    main.style.bottom = '80px'; // footer height
+                    main.style.position = 'fixed';
+                    
+                    footer.style.position = 'fixed';
+                    footer.style.bottom = '0';
                 }
             } else {
                 setViewportHeight(window.innerHeight);
             }
         };
 
+        // Prevent zoom on input focus
         const viewport = document.querySelector('meta[name=viewport]');
         if (viewport) {
             viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
         }
 
+        // Listen to viewport changes
         window.addEventListener('resize', handleResize);
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', handleResize);
             window.visualViewport.addEventListener('scroll', handleResize);
         }
 
+        // Set initial height
         handleResize();
 
         return () => {
@@ -102,25 +134,73 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
         };
     }, []);
 
-    const handleFormSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (message.trim() === '') return;
 
-        const userMessage: Message = { role: 'user', content: message };
+    const handleFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (message.trim() === '' || isLoading) return;
+
+        const userMessage: Message = {
+            role: 'user',
+            content: message
+        };
 
         setMessages(prevMessages => [...prevMessages, userMessage]);
         setMessage('');
         setShowEmojiPicker(false);
+        setIsLoading(true);
 
-        // Add mock AI response
-        setTimeout(() => {
-            const randomReply = mockReplies[Math.floor(Math.random() * mockReplies.length)];
-            const aiMessage: Message = { role: 'assistant', content: randomReply };
-            setMessages(prevMessages => [...prevMessages, aiMessage]);
-        }, 800);
+        try {
+            const phoneNumber = localStorage.getItem('phoneNumber');
+            if (!phoneNumber) {
+                throw new Error('No phone number found. Please sign in again.');
+            }
+            const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiBase}/api/chat/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'phone-number': phoneNumber
+                },
+                body: JSON.stringify({
+                    messages: [...messages, userMessage],
+                    model: 'sereinsoul'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to get response from AI: ${await response.text()}`);
+            }
+
+            const aiResponse = await response.json();
+            if (aiResponse && (aiResponse.role === 'assistant' || aiResponse.role === 'system')) {
+                setMessages(prevMessages => [...prevMessages, aiResponse]);
+            } else {
+                console.error('Invalid response format:', aiResponse);
+                throw new Error('Invalid response format from server');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            // Add error message to chat
+            setMessages(prevMessages => [...prevMessages, {
+                role: 'assistant',
+                content: 'I apologize, but I encountered an error. Please try again.'
+            }]);
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    // Persist messages and update last activity timestamp
+    useEffect(() => {
+        if (messages.length > 0) {
+            localStorage.setItem('chatMessages', JSON.stringify(messages));
+            localStorage.setItem('chatLastAt', String(Date.now()));
+        }
+    }, [messages]);
+    
+    const isMobile = () => {
+        return /Mobi/i.test(navigator.userAgent);
     };
-
-    const isMobile = () => /Mobi/i.test(navigator.userAgent);
 
     const handleAttachmentClick = () => {
         if (isMobile()) {
@@ -137,14 +217,22 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
             console.log('File selected:', file);
         }
         setShowAttachmentOptions(false);
-        if (event.target) {
+        if(event.target) {
             event.target.value = '';
         }
     };
+    
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
 
-    const handleUploadClick = () => fileInputRef.current?.click();
-    const handleTakePhotoClick = () => cameraInputRef.current?.click();
-    const handleEmojiClick = (emoji: string) => setMessage(prev => prev + emoji);
+    const handleTakePhotoClick = () => {
+        cameraInputRef.current?.click();
+    };
+
+    const handleEmojiClick = (emoji: string) => {
+        setMessage(prevMessage => prevMessage + emoji);
+    };
 
     return (
         <div 
@@ -156,7 +244,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
                 WebkitOverflowScrolling: 'touch'
             }}
         >
-            {/* Chat Header */}
+            {/* Chat Header - Fixed at top like WhatsApp */}
             <header 
                 className="flex items-center justify-between p-3 border-b border-gray-200 bg-white"
                 style={{ 
@@ -190,7 +278,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
                 </button>
             </header>
 
-            {/* Messages */}
+            {/* Message Area - Only this scrolls, positioned between fixed header and footer */}
             <main 
                 className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4" 
                 style={{ 
@@ -216,10 +304,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
                         </div>
                     </div>
                 ))}
+                {(showTypingIntro || isLoading) && (
+                    <div className="flex justify-start">
+                        <div className="max-w-xs md:max-w-md lg:max-w-lg px-5 py-3 rounded-2xl bg-white text-gray-800 rounded-bl-none border border-gray-200">
+                            <div className="flex items-center gap-1.5">
+                                <span className="inline-block w-1.5 h-1.5 bg-black rounded-full animate-bounce" style={{animationDelay:'0ms'}}></span>
+                                <span className="inline-block w-1.5 h-1.5 bg-black rounded-full animate-bounce" style={{animationDelay:'120ms'}}></span>
+                                <span className="inline-block w-1.5 h-1.5 bg-black rounded-full animate-bounce" style={{animationDelay:'240ms'}}></span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div ref={messagesEndRef} />
             </main>
 
-            {/* Input */}
+            {/* Message Input - Fixed at bottom, no gap with keyboard */}
             <footer 
                 className="bg-white border-t"
                 style={{ 

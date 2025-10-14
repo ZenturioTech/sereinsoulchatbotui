@@ -32,7 +32,7 @@ const plans = [
     {
         title: 'Month Pass',
         validity: '30 Days',
-         paymentUrl: 'https://rzp.io/rzp/oX9U49g',
+        paymentUrl: 'https://rzp.io/rzp/oX9U49g',
         features: [
             'Unlimited chat with AI wellness buddy',
             'Daily affirmations & mood journal with analytics',
@@ -45,7 +45,7 @@ const plans = [
 
 const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ onBackToChat }) => {
     const cardBaseClasses = "relative group transform transition-all duration-300 hover:scale-105 cursor-pointer rounded-[2rem] shadow-lg bg-blue-500 text-white flex flex-col hover:shadow-[0_25px_60px_-15px_rgba(59,130,246,0.3)] h-full";
-    const buttonClasses = "mt-10 w-full bg-white bg-opacity-20 backdrop-blur-sm text-white font-bold py-4 px-4 rounded-full text-lg group-hover:bg-opacity-100 group-hover:bg-white group-hover:text-blue-500 transition-colors duration-300";
+    const buttonClasses = "mt-10 w-full bg-white bg-opacity-20 backdrop-blur-sm text-white font-bold py-4 px-4 rounded-full text-lg group-hover:bg-opacity-100 group-hover:bg-white group-hover:text-blue-500 transition-colors duration-300 text-center block";
 
     return (
         <div className="min-h-screen bg-[#f0f4f8] font-sans">
@@ -86,12 +86,14 @@ const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ onBackToChat }) => 
                                         </li>
                                     ))}
                                 </ul>
-                                 <button 
+                                <a
+                                    href={plan.paymentUrl as string}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className={buttonClasses}
-                                    onClick={() => window.open(plan.paymentUrl, '_blank')}
                                 >
                                     Subscribe
-                                </button>
+                                </a>
                             </div>
                         </div>
                     ))}

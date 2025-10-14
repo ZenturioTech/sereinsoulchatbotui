@@ -24,7 +24,8 @@ const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess }) => {
   
   const handleContinue = () => {
     console.log('Terms Agreed! Welcome!');
-    alert('Sign in successful!');
+    localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('phoneNumber', mobileNumber);
     onSignInSuccess();
   }
 
