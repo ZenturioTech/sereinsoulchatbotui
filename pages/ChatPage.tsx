@@ -26,42 +26,52 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [showTypingIntro, setShowTypingIntro] = useState(true);
     const [messages, setMessages] = useState<Message[]>([]);
-    
+
     useEffect(() => {
-        // Show typing first, then display the intro message
-        const init = async () => {
-            setShowTypingIntro(true);
-            try {
-                const phoneNumber = localStorage.getItem('phoneNumber');
-                const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
-                const res = await fetch(`${apiBase}/api/chat/chat/intro`, {
-                    method: 'GET',
-                    headers: {
-                        'phone-number': phoneNumber || ''
-                    }
-                });
-                const intro = res.ok ? await res.json() : { role: 'assistant', content: "I'm here with you. How are you feeling today?" };
-                // small delay to let typing show first
-                setTimeout(() => {
-                    if (intro && (intro.role === 'assistant' || intro.role === 'system')) {
-                        setMessages([intro]);
-                    } else {
-                        setMessages([{ role: 'assistant', content: "I'm here with you. How are you feeling today?" }]);
-                    }
-                    setShowTypingIntro(false);
-                }, 900);
-            } catch {
-                setTimeout(() => {
-                    setMessages([{ role: 'assistant', content: "I'm here with you. How are you feeling today?" }]);
-                    setShowTypingIntro(false);
-                }, 900);
-            } finally {
-                localStorage.removeItem('chatMessages');
-                localStorage.removeItem('chatLastAt');
+    const init = async () => {
+        try {
+        // Step 1: Load saved chats first
+        const savedChats = localStorage.getItem('chatMessages');
+        if (savedChats) {
+            setMessages(JSON.parse(savedChats));
+            setShowTypingIntro(false);
+            return; // Skip intro if previous chats exist
+        }
+
+        // Step 2: No saved chats, show intro
+        setShowTypingIntro(true);
+        const phoneNumber = localStorage.getItem('phoneNumber');
+        const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiBase}/api/chat/chat/intro`, {
+            method: 'GET',
+            headers: {
+            'phone-number': phoneNumber || ''
             }
-        };
-        init();
+        });
+
+        const intro = res.ok
+            ? await res.json()
+            : { role: 'assistant', content: "I'm here with you. How are you feeling today?" };
+
+        setTimeout(() => {
+            if (intro && (intro.role === 'assistant' || intro.role === 'system')) {
+            setMessages([intro]);
+            } else {
+            setMessages([{ role: 'assistant', content: "I'm here with you. How are you feeling today?" }]);
+            }
+            setShowTypingIntro(false);
+        }, 900);
+        } catch {
+        setTimeout(() => {
+            setMessages([{ role: 'assistant', content: "I'm here with you. How are you feeling today?" }]);
+            setShowTypingIntro(false);
+        }, 900);
+        }
+    };
+
+    init();
     }, []);
+
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
     
