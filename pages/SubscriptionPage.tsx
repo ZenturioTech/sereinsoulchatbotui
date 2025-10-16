@@ -9,7 +9,7 @@ const plans = [
     {
         title: 'Day Pass',
         validity: '24hrs',
-        paymentUrl: 'https://rzp.io/rzp/qFcUzPR',
+        paymentUrl: 'https://rzp.io/rzp/Wp4R1CeV',
         features: [
             'Unlimited chat with AI wellness buddy',
             'Access to guided meditations & relaxation audio',
@@ -20,7 +20,7 @@ const plans = [
     {
         title: 'Week Pass',
         validity: '7 Days',
-        paymentUrl: 'https://rzp.io/rzp/u6HlXzS',
+        paymentUrl: 'https://rzp.io/rzp/jYIWcwSC',
         features: [
             'Unlimited chat with AI wellness buddy',
             'Daily personalized affirmations',
@@ -32,7 +32,7 @@ const plans = [
     {
         title: 'Month Pass',
         validity: '30 Days',
-        paymentUrl: 'https://rzp.io/rzp/oX9U49g',
+        paymentUrl: 'https://rzp.io/rzp/IsadMPZE',
         features: [
             'Unlimited chat with AI wellness buddy',
             'Daily affirmations & mood journal with analytics',
