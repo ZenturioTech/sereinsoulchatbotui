@@ -25,18 +25,24 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
       return;
     }
     setError(null);
-    const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+    // Use the VITE_API_URL defined in App.tsx context or .env
+    const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
     try {
-      const res = await fetch(`${apiBase}/api/auth/otp/verify`, {
+      const res = await fetch(`${apiBase}/api/auth/otp/verify`, { // Corrected endpoint
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone_number: `+91${mobileNumber}`, code: otp })
+        body: JSON.stringify({ phone_number: `+91${mobileNumber}`, code: otp }) // Backend expects 'code'
       });
+
       if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || 'Invalid or expired OTP');
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Invalid or expired OTP');
       }
-      onVerify();
+
+      const data = await res.json();
+      // Pass the received token back through the onVerify function
+      onVerify(data.token); // MODIFIED LINE
+
     } catch (err: any) {
       setError(err?.message || 'Invalid or expired OTP');
     }
