@@ -24,6 +24,8 @@ interface Message {
     isError?: boolean;
 }
 
+const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
+
 // Helper function to generate a unique session ID
 const generateSessionId = (phoneNumber: string | null): string => {
     const phonePart = phoneNumber ? phoneNumber.replace('+', '') : 'unknown'; // Use sanitized phone number
@@ -66,7 +68,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
             // --- Pass sessionId as a query parameter ---
             const response = await fetch(`${apiBase}/api/chat/history?sessionId=${encodeURIComponent(sessionIdToFetch)}`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'x-api-key': GATEKEEPER_API_KEY
                 }
             });
             // ------------------------------------------
@@ -152,7 +155,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                  method: 'POST',
                  headers: {
                      'Content-Type': 'application/json',
-                     'Authorization': `Bearer ${token}`
+                     'Authorization': `Bearer ${token}`,
+                     'x-api-key': GATEKEEPER_API_KEY
                  },
                  body: JSON.stringify({
                      messages: currentMessages,

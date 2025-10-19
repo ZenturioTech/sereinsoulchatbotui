@@ -14,6 +14,8 @@ interface Plan {
     key: 'day' | 'week' | 'month'; // Add a key to identify the plan
 }
 
+const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
+
 const initialPlans: Plan[] = [
     {
         key: 'day',
@@ -75,7 +77,8 @@ const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ onBackToChat }) => 
                 const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
                 const response = await fetch(`${apiBase}/api/payment/links`, {
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'x-api-key': GATEKEEPER_API_KEY
                     }
                 });
 

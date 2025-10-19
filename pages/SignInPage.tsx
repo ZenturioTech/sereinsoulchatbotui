@@ -9,6 +9,8 @@ interface SignInPageProps {
   onSignInSuccess: (token: string) => void;
 }
 
+const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
+
 const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess }) => {
   // Add 'details' to the possible steps
   const [step, setStep] = useState<'signIn' | 'otp' | 'terms' | 'details'>('signIn');
@@ -50,7 +52,8 @@ const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess }) => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'x-api-key': GATEKEEPER_API_KEY
             },
             body: JSON.stringify(details)
         });
