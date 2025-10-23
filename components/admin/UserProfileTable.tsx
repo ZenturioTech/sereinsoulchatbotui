@@ -23,7 +23,7 @@ interface UserProfile {
 interface UserProfileTableProps {
     token: string;
 }
-const GATEKEEPER_API_KEY = import.meta.env.VITE_GATEKEEPER_API_KEY;
+const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
 
 const UserProfileTable: React.FC<UserProfileTableProps> = ({ token }) => {
     const [profiles, setProfiles] = useState<UserProfile[]>([]);
@@ -35,7 +35,7 @@ const UserProfileTable: React.FC<UserProfileTableProps> = ({ token }) => {
             setIsLoading(true);
             setError('');
             try {
-                const apiBase = (import.meta as any).env.VITE_API_URL || 'http://localhost:8080';
+                const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
                 const response = await fetch(`${apiBase}/api/admin/users`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
