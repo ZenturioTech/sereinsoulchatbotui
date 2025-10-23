@@ -23,7 +23,6 @@ interface Message {
     content: string;
     isError?: boolean;
 }
-
 const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
 
 // Helper function to generate a unique session ID

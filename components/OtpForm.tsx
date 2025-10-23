@@ -3,13 +3,16 @@ import OtpIcon from './icons/OtpIcon';
 
 interface OtpFormProps {
   mobileNumber: string;
-  onVerify: () => void;
+  onVerify: (token: string, isAdmin: boolean) => void;
   onBack: () => void;
 }
+
+const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
 
 const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => {
   const [otp, setOtp] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (error) {
@@ -30,7 +33,7 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
     try {
       const res = await fetch(`${apiBase}/api/auth/otp/verify`, { // Corrected endpoint
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json','x-api-key': GATEKEEPER_API_KEY },
         body: JSON.stringify({ phone_number: `+91${mobileNumber}`, code: otp }) // Backend expects 'code'
       });
 
@@ -41,11 +44,12 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
 
       const data = await res.json();
       // Pass the received token back through the onVerify function
-      onVerify(data.token); // MODIFIED LINE
+      onVerify(data.token, data.isAdmin || false); // MODIFIED LINE
 
     } catch (err: any) {
       setError(err?.message || 'Invalid or expired OTP');
     }
+    finally { setIsLoading(false); }
   };
 
   return (
@@ -84,6 +88,7 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
         
         <button
           type="submit"
+          disabled={isLoading}
           className="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-full hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
         >
           Verify & Proceed

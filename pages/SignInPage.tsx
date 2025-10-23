@@ -11,23 +11,33 @@ interface SignInPageProps {
 
 const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
 
-const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess }) => {
-  // Add 'details' to the possible steps
+const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess, onAdminSignInSuccess }) => { // <-- Add new prop
   const [step, setStep] = useState<'signIn' | 'otp' | 'terms' | 'details'>('signIn');
   const [mobileNumber, setMobileNumber] = useState('');
-  const [error, setError] = useState(''); // Add error state for API calls
+  const [error, setError] = useState('');
+  const [isAdminLogin, setIsAdminLogin] = useState(false); // <-- NEW: State to track admin status
 
   const handleOtpSent = (number: string) => {
     setMobileNumber(number);
-    setStep('otp');
+    setStep('otp'); // This should change the view to OtpForm
   };
-  
-  const handleVerify = (token: string) => {
-    console.log('OTP Verified! Storing token and proceeding to terms.');
-    localStorage.setItem('authToken', token); // Store token immediately
+  // --- MODIFIED: handleVerify ---
+  const handleVerify = (token: string, isAdmin: boolean) => { // Receive isAdmin flag
+    console.log(`OTP Verified! Admin: ${isAdmin}. Storing token.`);
+    localStorage.setItem('authToken', token);
     localStorage.setItem('phoneNumber', `+91${mobileNumber}`);
-    setStep('terms');
+    setIsAdminLogin(isAdmin); // Store admin status
+
+    // Decide next step based on admin status
+    if (isAdmin) {
+      console.log("Admin user detected, skipping terms/details, calling onAdminSignInSuccess.");
+      onAdminSignInSuccess(token); // Redirect admin immediately
+    } else {
+      console.log("Regular user, proceeding to terms.");
+      setStep('terms'); // Regular users go to terms
+    }
   };
+  // -----------------------------
   
   const handleContinue = () => {
     console.log('Terms Agreed! Proceeding to details form.');
@@ -45,6 +55,8 @@ const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess }) => {
         setStep('signIn'); // Go back to login on error
         return;
     }
+
+    console.log("Attempting to send GATEKEEPER_API_KEY:", GATEKEEPER_API_KEY);
 
     try {
         const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -88,9 +100,7 @@ const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess }) => {
             {step === 'signIn' && <SignInForm onOtpSent={handleOtpSent} />}
             {step === 'otp' && <OtpForm mobileNumber={mobileNumber} onVerify={handleVerify} onBack={handleBack} />}
             {step === 'terms' && <TermsAgreement onContinue={handleContinue} />}
-            {/* --- NEW: Render the DetailsForm --- */}
             {step === 'details' && <DetailsForm onSubmit={handleDetailsSubmit} />}
-            {/* Display error if any API call fails */}
             {error && <p className="text-red-500 text-center mt-4">{error}</p>}
         </div>
     </div>
