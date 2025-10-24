@@ -43,6 +43,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
     const [error, setError] = useState('');
     const [expandedMessageIndex, setExpandedMessageIndex] = useState<number | null>(null);
     const [isOnline, setIsOnline] = useState<boolean>(false);
+    const [isInitialCheck, setIsInitialCheck] = useState<boolean>(true); // Track initial check
 
 
     // --- State for current session ID ---
@@ -123,7 +124,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
             }
         };
 
-        checkOnline(); // first check immediately
+        // Initial check
+        checkOnline().then(() => {
+            setIsInitialCheck(false); // Mark initial check as complete
+        });
+        
+        // Set up interval after initial check
         const interval = setInterval(checkOnline, 10000);
         return () => clearInterval(interval);
     }, []);
@@ -132,6 +138,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
 
     // --- useEffect for Initial Session ID and History Load ---
     useEffect(() => {
+        if (isInitialCheck) return; // Don't run until initial check is complete
+        
         const phoneNumber = localStorage.getItem('phoneNumber'); // Assumes stored like '+91...'
         const phonePart = phoneNumber ? phoneNumber.replace('+', '') : 'unknown';
         let activeSessionId = localStorage.getItem('activeChatSessionId');
@@ -152,9 +160,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
         }
 
         setCurrentSessionId(activeSessionId); // Set the state
-        fetchHistory(activeSessionId);      // Fetch history for this session
+        
+        // Only fetch history if online, otherwise show offline message
+        if (isOnline) {
+            fetchHistory(activeSessionId);      // Fetch history for this session
+        } else {
+            setIsHistoryLoading(false);
+            setMessages([]);
+        }
 
-    }, [fetchHistory]); // Run only once on initial mount
+    }, [fetchHistory, isOnline, isInitialCheck]); // Run when initial check is complete
 
 
     // --- Scrolling Effect (no change needed) ---
@@ -170,6 +185,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (message.trim() === '' || isLoading || isHistoryLoading || !currentSessionId) return;
+
+        // Prevent sending messages if offline
+        if (!isOnline) {
+            setMessages([{ role: 'assistant', content: "I'm sleeping, come back later -Your Seri" }]);
+            return;
+        }
 
         const userMessage: Message = { role: 'user', content: message };
         const currentMessages = [...messages, userMessage];
@@ -240,6 +261,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
         setMessage('');
         setError('');
         setExpandedMessageIndex(null); // Reset expanded message
+
+        // If offline, show offline message and return
+        if (!isOnline) {
+            setIsHistoryLoading(false);
+            setMessages([{ role: 'assistant', content: "I'm sleeping, come back later -Your Seri" }]);
+            return;
+        }
 
         try {
             const apiBase = (import.meta as any).env.VITE_API_BASE_URL;
@@ -428,11 +456,30 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                      <LockIcon className="w-5 h-5 text-gray-400" />
                      <p>This chat is secure and confidential. All your messages are encrypted and never shared with others</p>
                  </div>
-                 {isHistoryLoading && <div className="text-center text-gray-500 py-4">Loading messages...</div>}
+                 
+                 {/* Show offline message when offline */}
+                 {!isOnline && !isInitialCheck && (
+                     <div className="flex flex-col items-center justify-center h-full text-center">
+                         <p className="text-gray-700 text-lg">I'm sleeping, come back later</p>
+                         <p className="text-gray-500 mt-2">-Your Seri</p>
+                         {/* Typing indicator animation */}
+                         <div className="flex items-center gap-1.5 mt-4">
+                             <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}}></span>
+                             <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'120ms'}}></span>
+                             <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'240ms'}}></span>
+                         </div>
+                     </div>
+                 )}
+                 
+                 {isInitialCheck && (
+                     <div className="text-center text-gray-500 py-4">Checking status...</div>
+                 )}
+                 
+                 {isHistoryLoading && isOnline && <div className="text-center text-gray-500 py-4">Loading messages...</div>}
                  {!isHistoryLoading && error && <div className="text-center text-red-500 py-4">{error}</div>}
 
                 {/* Display Messages with iMessage-style animations */}
-                {!isHistoryLoading && messages.map((msg, index) => {
+                {!isHistoryLoading && !isInitialCheck && isOnline && messages.map((msg, index) => {
                     const isLastUserMessage = msg.role === 'user' && index === messages.length - 1;
                     const isExpanded = expandedMessageIndex === index;
                     
@@ -526,7 +573,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                             <button role="menuitem" onClick={handleTakePhotoClick} className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200 hover:scale-105 active:scale-95"><CameraIcon className="w-5 h-5" /><span>Take Photo</span></button>
                         </div>
                     </>
-                )}
+                 )}
                  {showEmojiPicker && (
                     <div style={{ animation: 'slideUpFade 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' }}>
                         <EmojiPicker onEmojiSelect={handleEmojiClick} onClose={() => setShowEmojiPicker(false)} style={{ zIndex: 1020 }} />
@@ -548,7 +595,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" aria-hidden="true" />
                      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" aria-hidden="true" />
                      <button type="button" onClick={handleAttachmentClick} className="p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Attach file" aria-haspopup="true" aria-expanded={showAttachmentOptions}><PaperclipIcon className="w-6 h-6" /></button>
-                     <button type="submit" disabled={isLoading || isHistoryLoading} className={`ml-2 text-white rounded-full p-3 transition-all duration-300 shadow-lg transform active:scale-95 ${isLoading || isHistoryLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/30 hover:scale-105'}`} aria-label="Send message"><SendIcon className="w-5 h-5" /></button>
+                     <button 
+                         type="submit" 
+                         disabled={isLoading || isHistoryLoading || !isOnline} 
+                         className={`ml-2 text-white rounded-full p-3 transition-all duration-300 shadow-lg transform active:scale-95 ${
+                             isLoading || isHistoryLoading || !isOnline 
+                                 ? 'bg-gray-400 cursor-not-allowed' 
+                                 : 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/30 hover:scale-105'
+                         }`} 
+                         aria-label="Send message"
+                     >
+                         <SendIcon className="w-5 h-5" />
+                     </button>
                  </form>
             </footer>
 
