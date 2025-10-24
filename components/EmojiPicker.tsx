@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 interface EmojiPickerProps {
   onEmojiSelect: (emoji: string) => void;
   onClose: () => void;
+  style?: React.CSSProperties;
 }
 
 const emojiCategories = [
@@ -38,7 +39,7 @@ const emojiCategories = [
   },
 ];
 
-const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => {
+const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose, style }) => {
   const [activeCategory, setActiveCategory] = useState(emojiCategories[0].name);
   const pickerRef = useRef<HTMLDivElement>(null);
   const emojiContainerRef = useRef<HTMLDivElement>(null);
@@ -68,6 +69,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect, onClose }) => 
   return (
     <div 
         ref={pickerRef}
+        style={style}
         className="absolute bottom-full mb-2 bg-white rounded-2xl shadow-lg z-30 w-full max-w-xs sm:max-w-sm h-80 border border-gray-100 flex flex-col"
         onClick={(e) => e.stopPropagation()}
         aria-modal="true"

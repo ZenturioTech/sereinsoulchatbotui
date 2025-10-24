@@ -11,7 +11,7 @@ import ImageIcon from '../components/icons/ImageIcon';
 import CameraIcon from '../components/icons/CameraIcon';
 import EmojiPicker from '../components/EmojiPicker';
 // Import an icon for the 'New Chat' button (using a simple '+' or find/create one)
-import PlusIcon from '../components/icons/PlusIcon'; // Make sure you have created PlusIcon.tsx
+import PlusIcon from '../components/icons/PlusIcon'; // Make sure this import is correct
 
 interface ChatPageProps {
     onUpgrade: () => void;
@@ -41,6 +41,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
     const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [error, setError] = useState('');
+    const [expandedMessageIndex, setExpandedMessageIndex] = useState<number | null>(null);
+    const [isOnline, setIsOnline] = useState<boolean>(false);
+
 
     // --- State for current session ID ---
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -49,6 +52,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputFieldRef = useRef<HTMLInputElement>(null);
 
     // --- Fetch History Function (modified to accept sessionId) ---
     const fetchHistory = useCallback(async (sessionIdToFetch: string) => {
@@ -63,7 +67,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
         setError('');
         setMessages([]); // Clear messages before loading history for the session
         try {
-            const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080' || 'https://m99mpkns-8080.inc1.devtunnels.ms';
+            const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
             // --- Pass sessionId as a query parameter ---
             const response = await fetch(`${apiBase}/api/chat/history?sessionId=${encodeURIComponent(sessionIdToFetch)}`, {
                 headers: {
@@ -83,18 +87,48 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                  setMessages(history);
                  console.log(`Loaded ${history.length} messages for session ${sessionIdToFetch}.`);
             } else {
-                 setMessages([{ role: 'assistant', content: "Welcome! How can I assist you today?" }]);
-                 console.log(`No history found for session ${sessionIdToFetch}, setting initial welcome message.`);
+                 // This case is now handled by the backend returning a welcome message
+                 console.log(`No history found for session ${sessionIdToFetch}, backend should send greeting.`);
+                 // We still set messages just in case backend sends empty array
+                 if (history.length === 0) {
+                    setMessages([{ role: 'assistant', content: "Welcome! How can I assist you today?" }]);
+                 }
             }
 
         } catch (err: any) {
             console.error("Error fetching history:", err);
             setError("Could not load messages for this session.");
-            setMessages([{ role: 'assistant', content: "Sorry, couldn't load messages. How can I help now?" }]);
+            setMessages([{ role: 'assistant', content: "Sorry, couldn't load messages. How can I help now?", isError: true }]);
         } finally {
             setIsHistoryLoading(false);
         }
     }, [token]); // Re-fetch if token changes
+
+    useEffect(() => {
+        const apiBase = (import.meta as any).env.VITE_API_BASE_URL;
+        console.log("🔍 Health check URL:", `${apiBase}/health`);
+
+        const checkOnline = async () => {
+            try {
+            const res = await fetch(`${apiBase}/health`, {
+                method: 'GET',
+                headers: { 'Cache-Control': 'no-cache' },
+            });
+
+            console.log("🟢 Health response:", res.status, res.ok);
+            setIsOnline(res.ok);
+            } catch (err) {
+            console.error("🔴 Health check failed:", err);
+            setIsOnline(false);
+            }
+        };
+
+        checkOnline(); // first check immediately
+        const interval = setInterval(checkOnline, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+
 
     // --- useEffect for Initial Session ID and History Load ---
     useEffect(() => {
@@ -103,8 +137,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
         let activeSessionId = localStorage.getItem('activeChatSessionId');
 
         // --- VALIDATION LOGIC ---
-        // If there's an active session, check if it belongs to the current user.
-        // If not, it's a stale session from a previous login.
         if (activeSessionId && !activeSessionId.startsWith(phonePart)) {
             console.log(`Stale session detected (${activeSessionId}) for user ${phonePart}. Discarding.`);
             activeSessionId = null; // Discard the stale session ID
@@ -134,44 +166,52 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
     }, [messages]);
 
 
-    // --- Form Submission (modified to send currentSessionId) ---
+    // --- Form Submission (modified for animation) ---
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (message.trim() === '' || isLoading || isHistoryLoading || !currentSessionId) return; // Check currentSessionId too
+        if (message.trim() === '' || isLoading || isHistoryLoading || !currentSessionId) return;
 
         const userMessage: Message = { role: 'user', content: message };
         const currentMessages = [...messages, userMessage];
 
+        // Update UI immediately
         setMessages(currentMessages);
+        // Optional: comment this if you want to keep the text visible
         setMessage('');
         setShowEmojiPicker(false);
         setIsLoading(true);
         setError('');
 
+        // ✅ Keep keyboard open
+        inputFieldRef.current?.focus();
+
         try {
-            const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
+            const apiBase = (import.meta as any).env.VITE_API_BASE_URL;
             const response = await fetch(`${apiBase}/api/chat/chat`, {
-                 method: 'POST',
-                 headers: {
-                     'Content-Type': 'application/json',
-                     'Authorization': `Bearer ${token}`,
-                     'x-api-key': GATEKEEPER_API_KEY
-                 },
-                 body: JSON.stringify({
-                     messages: currentMessages,
-                     sessionId: currentSessionId // --- Send the current session ID ---
-                 })
-             });
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'x-api-key': GATEKEEPER_API_KEY
+                },
+                body: JSON.stringify({
+                    messages: currentMessages,
+                    sessionId: currentSessionId
+                })
+            });
 
             if (!response.ok) {
-                 const errorData = await response.json();
-                 if (response.status === 402) { throw new Error(errorData.error || "Payment required."); }
-                 throw new Error(errorData.error || `Failed to get response`);
+                const errorData = await response.json();
+                if (response.status === 402) { throw new Error(errorData.error || "Payment required."); }
+                throw new Error(errorData.error || `Failed to get response`);
             }
+
             const aiResponse = await response.json();
             if (aiResponse && aiResponse.role === 'assistant') {
                 setMessages(prev => [...prev, aiResponse]);
-            } else { throw new Error('Invalid response format'); }
+            } else {
+                throw new Error('Invalid response format');
+            }
 
         } catch (error: any) {
             console.error('Error:', error);
@@ -179,34 +219,157 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
             setMessages(prev => [...prev, { role: 'assistant', content: error.message || 'Error.', isError: true }]);
         } finally {
             setIsLoading(false);
+            // ✅ Keep keyboard open for next message
+            inputFieldRef.current?.focus();
         }
     };
 
-    // --- Handle New Chat Button (modified) ---
-    const handleNewChat = () => {
+
+    // --- Handle New Chat Button (modified to call fetchHistory) ---
+    const handleNewChat = async () => {
         console.log("Starting new chat session...");
+        const oldSessionId = currentSessionId;
         const phoneNumber = localStorage.getItem('phoneNumber');
-        const newSessionId = generateSessionId(phoneNumber); // Create a unique ID
+        const newSessionId = generateSessionId(phoneNumber);
 
-        localStorage.setItem('activeChatSessionId', newSessionId); // Store as the new active session
-        setCurrentSessionId(newSessionId); // Update state
+        localStorage.setItem('activeChatSessionId', newSessionId);
+        setCurrentSessionId(newSessionId);
+        
+        setIsHistoryLoading(true); // Show loading spinner
+        setMessages([]); // Clear messages immediately
+        setMessage('');
+        setError('');
+        setExpandedMessageIndex(null); // Reset expanded message
 
-        // Reset messages to the initial welcome message for the new session
-        setMessages([{ role: 'assistant', content: "Okay, let's start fresh. What's on your mind?" }]);
-        setMessage(''); // Clear input
-        setError(''); // Clear errors
-        setIsHistoryLoading(false); // Ensure loading indicators are off
-        setIsLoading(false);
+        try {
+            const apiBase = (import.meta as any).env.VITE_API_BASE_URL;
+            // Call backend to clear the *old* session history (fire and forget, or await)
+            await fetch(`${apiBase}/api/chat/new`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'x-api-key': GATEKEEPER_API_KEY },
+                body: JSON.stringify({ sessionId: oldSessionId })
+            });
+
+            // Fetch history for the *new* session (which will return the initial greeting from backend)
+            await fetchHistory(newSessionId); // This will set messages and stop loading
+
+        } catch (err) {
+            console.error("Failed to start new chat:", err);
+            setError("Could not start a new chat session.");
+            setMessages([{ role: 'assistant', content: "Okay, let's start fresh. What's on your mind?" }]); // Fallback greeting
+            setIsHistoryLoading(false); // Stop loading on error
+        }
     };
     // -----------------------------------
 
-    // --- Other Handlers (isMobile, attachment, file/camera, emoji - no changes needed) ---
+    // --- Other Handlers (no changes) ---
      const isMobile = () => /Mobi/i.test(navigator.userAgent);
-     const handleAttachmentClick = () => { /* ... */ };
-     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => { /* ... */ };
+     const handleAttachmentClick = () => {
+        setShowAttachmentOptions(prev => !prev); // Toggle the state
+        setShowEmojiPicker(false); // Close emoji picker if open
+     };
+     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            console.log("File selected:", file.name);
+            // TODO: Implement file upload logic here
+            // e.g., display preview, upload to server
+            setMessages(prev => [...prev, { role: 'user', content: `(Sent image: ${file.name})` }]); // Placeholder
+        }
+        setShowAttachmentOptions(false); 
+        event.target.value = '';
+     };
      const handleUploadClick = () => fileInputRef.current?.click();
      const handleTakePhotoClick = () => cameraInputRef.current?.click();
      const handleEmojiClick = (emoji: string) => setMessage(prev => prev + emoji);
+
+     // Format message content with proper UI components
+     const formatMessageContent = (content: string) => {
+        // Check if message contains support information
+        const phonePattern = /(\d{2}-\d{10}|\d{10})/g;
+        const urlPattern = /(https?:\/\/[^\s]+)/g;
+        const hasPhones = phonePattern.test(content);
+        const hasUrls = urlPattern.test(content);
+
+        if (hasPhones || hasUrls) {
+            const lines = content.split('\n');
+            const elements: React.ReactElement[] = [];
+            
+            lines.forEach((line, idx) => {
+                // Check for phone numbers
+                const phoneMatch = line.match(/([A-Za-z\s]+):\s*(\d{2}-\d{10}|\d{10})/);
+                if (phoneMatch) {
+                    const [, name, phone] = phoneMatch;
+                    elements.push(
+                        <div key={`phone-${idx}`} className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 mb-2 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-200">
+                            <div className="flex-1">
+                                <div className="text-xs font-semibold text-green-800 mb-0.5">{name}</div>
+                                <div className="text-sm font-mono text-green-900">{phone}</div>
+                            </div>
+                            <a
+                                href={`tel:${phone.replace(/-/g, '')}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="ml-3 bg-green-500 hover:bg-green-600 text-white rounded-full p-2 transition-all duration-200 transform hover:scale-110 active:scale-95 shadow-md"
+                                aria-label={`Call ${name}`}
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                </svg>
+                            </a>
+                        </div>
+                    );
+                }
+                // Check for URLs
+                else if (line.match(urlPattern)) {
+                    const urlMatch = line.match(/([^:]+):\s*(https?:\/\/[^\s]+)/);
+                    if (urlMatch) {
+                        const [, label, url] = urlMatch;
+                        elements.push(
+                            <a
+                                key={`url-${idx}`}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="block bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-2 hover:shadow-md transition-all duration-200 hover:border-blue-300 group"
+                            >
+                                <div className="flex items-center">
+                                    <svg className="w-4 h-4 text-blue-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-xs font-semibold text-blue-800 mb-0.5">{label}</div>
+                                        <div className="text-xs text-blue-600 truncate group-hover:text-blue-700">{url}</div>
+                                    </div>
+                                </div>
+                            </a>
+                        );
+                    }
+                }
+                // Regular text
+                else if (line.trim() && !line.startsWith('*')) {
+                    elements.push(
+                        <p key={`text-${idx}`} className="text-sm mb-1">{line}</p>
+                    );
+                }
+            });
+            
+            return <div className="space-y-1">{elements}</div>;
+        }
+
+        return <p className="text-sm break-words">{content}</p>;
+    };
+
+    const handleMessageClick = (index: number) => {
+        setExpandedMessageIndex(expandedMessageIndex === index ? null : index);
+    };
+
+    const handleBackgroundClick = (e: React.MouseEvent) => {
+        // Only close if clicking on the main background, not on any child elements
+        if (e.target === e.currentTarget && expandedMessageIndex !== null) {
+            setExpandedMessageIndex(null);
+        }
+    };
 
 
     // JSX Part
@@ -215,81 +378,117 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
             className="flex flex-col w-full bg-gray-50 font-sans fixed inset-0"
             style={{ height: '100%', overflow: 'hidden', touchAction: 'none', WebkitOverflowScrolling: 'touch' }}
         >
-            {/* Header (Added handleNewChat to button) */}
+            {/* Header (no changes) */}
             <header
                 className="flex items-center justify-between p-3 border-b border-gray-200 bg-white"
                 style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, height: '72px', transform: 'translateY(0)', transformOrigin: 'top', willChange: 'transform' }}
             >
-                {/* Left: Avatar & Status */}
-                <div className="flex items-center space-x-3">
+                {/* ... (header content) ... */}
+                 <div className="flex items-center space-x-3">
                      <img className="w-12 h-12 rounded-full object-cover" src={avatarSrc} alt="Sereine's avatar" />
                      <div>
-                         <h2 className="text-lg font-semibold text-gray-800">Sereine</h2>
-                         <div className="flex items-center space-x-1.5">
-                             <span className="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
-                             <p className="text-xs text-gray-500">Active Now</p>
-                         </div>
+                         <h2 className="text-lg font-semibold text-gray-800">Seri</h2>
+                         <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                            <span className="text-sm text-gray-500">
+                                {isOnline ? 'Active now' : 'Offline'}
+                            </span>
+                        </div>
+
                      </div>
-                </div>
-                {/* Right: New Chat & Upgrade */}
-                <div className="flex items-center space-x-3">
-                    <button
-                        onClick={handleNewChat} // <-- Call the new chat handler
-                        className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
-                        title="Start New Chat"
-                        aria-label="Start New Chat"
-                        disabled={isLoading || isHistoryLoading} // Disable while loading
-                    >
-                         <PlusIcon className="w-6 h-6" />
-                    </button>
-                    <button
-                        onClick={onUpgrade}
-                        className="flex items-center space-x-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition-colors"
-                    >
-                        <DiamondIcon className="w-4 h-4" />
-                        <span>Upgrade</span>
-                    </button>
-                </div>
+                 </div>
+                 <div className="flex items-center space-x-3">
+                     <button
+                         onClick={handleNewChat}
+                         className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                         title="Start New Chat"
+                         aria-label="Start New Chat"
+                         disabled={isLoading || isHistoryLoading}
+                     >
+                          <PlusIcon className="w-6 h-6" />
+                     </button>
+                     <button
+                         onClick={onUpgrade}
+                         className="flex items-center space-x-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-full text-sm hover:bg-blue-700 transition-colors"
+                     >
+                         <DiamondIcon className="w-4 h-4" />
+                         <span>Upgrade</span>
+                     </button>
+                 </div>
             </header>
 
-            {/* Message Area (no layout changes needed) */}
+            {/* Message Area */}
             <main
                 className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4"
                 style={{ position: 'absolute', top: '72px', left: 0, right: 0, bottom: '80px', scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+                onClick={handleBackgroundClick}
             >
-                {/* Security Message */}
-                <div className="flex flex-col items-center justify-center text-center text-gray-500 text-xs space-y-2 mb-4">
-                    <LockIcon className="w-5 h-5 text-gray-400" />
-                    <p>This chat is secure and confidential. All your messages are encrypted and never shared with others</p>
-                </div>
+                {/* ... (Security Message, Loading/Error States) ... */}
+                 <div className="flex flex-col items-center justify-center text-center text-gray-500 text-xs space-y-2 mb-4">
+                     <LockIcon className="w-5 h-5 text-gray-400" />
+                     <p>This chat is secure and confidential. All your messages are encrypted and never shared with others</p>
+                 </div>
+                 {isHistoryLoading && <div className="text-center text-gray-500 py-4">Loading messages...</div>}
+                 {!isHistoryLoading && error && <div className="text-center text-red-500 py-4">{error}</div>}
 
-                {/* Loading/Error States */}
-                {isHistoryLoading && <div className="text-center text-gray-500 py-4">Loading messages...</div>}
-                {!isHistoryLoading && error && <div className="text-center text-red-500 py-4">{error}</div>}
+                {/* Display Messages with iMessage-style animations */}
+                {!isHistoryLoading && messages.map((msg, index) => {
+                    const isLastUserMessage = msg.role === 'user' && index === messages.length - 1;
+                    const isExpanded = expandedMessageIndex === index;
+                    
+                    return (
+                        <div 
+                            key={`${currentSessionId}-${msg.role}-${index}-${msg.content.slice(0, 10)}`}
+                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} relative transition-all duration-300`}
+                            style={{
+                                animation: `${msg.role === 'user' ? 'popInFromInput' : 'slideInLeft'} 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`,
+                                opacity: 0,
+                                animationDelay: isLastUserMessage ? '0s' : `${Math.min(index * 0.05, 0.3)}s`,
+                                zIndex: isExpanded ? 1000 : 1,
+                                filter: expandedMessageIndex !== null && !isExpanded ? 'blur(4px)' : 'none',
+                                pointerEvents: expandedMessageIndex !== null && !isExpanded ? 'none' : 'auto'
+                            }}
+                        >
+                            <div 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMessageClick(index);
+                                }}
+                                className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl transition-all duration-300 cursor-pointer ${
+                                     msg.role === 'user'
+                                        ? 'bg-blue-500 text-white rounded-br-none shadow-md hover:shadow-lg'
+                                        : msg.isError
+                                        ? 'bg-red-100 text-red-700 rounded-bl-none border border-red-200 shadow-md hover:shadow-lg'
+                                        : 'bg-white text-gray-800 rounded-bl-none border border-gray-200 shadow-md hover:shadow-lg'
+                                }`}
+                                style={{
+                                    transform: isExpanded ? 'scale(1.15)' : 'scale(1)',
+                                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                    boxShadow: isExpanded 
+                                        ? '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 12px 24px -8px rgba(0, 0, 0, 0.15)'
+                                        : undefined
+                                }}
+                            >
+                                {formatMessageContent(msg.content)}
+                            </div>
+                        </div>
+                    );
+                })}
 
-                {/* Display Messages */}
-                {!isHistoryLoading && messages.map((msg, index) => (
-                     <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                         <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl ${
-                              msg.role === 'user'
-                                 ? 'bg-blue-500 text-white rounded-br-none'
-                                 : msg.isError
-                                 ? 'bg-red-100 text-red-700 rounded-bl-none border border-red-200'
-                                 : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
-                         }`}>
-                             <p className="text-sm break-words">{msg.content}</p>
-                         </div>
-                     </div>
-                ))}
-
-                {/* Typing Indicator */}
+                {/* Typing Indicator with smooth animation */}
                 {isLoading && (
-                    <div className="flex justify-start">
-                        <div className="max-w-xs md:max-w-md lg:max-w-lg px-5 py-3 rounded-2xl bg-white text-gray-800 rounded-bl-none border border-gray-200">
+                    <div 
+                        className="flex justify-start"
+                        style={{
+                            animation: 'slideInLeft 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                            opacity: 0
+                        }}
+                    >
+                        <div className="max-w-xs md:max-w-md lg:max-w-lg px-5 py-3 rounded-2xl bg-white text-gray-800 rounded-bl-none border border-gray-200 shadow-md">
                             <div className="flex items-center gap-1.5">
-                                <span className="inline-block w-1.5 h-1.5 bg-black rounded-full animate-bounce" style={{animationDelay:'0ms'}}></span>
-                                <span className="inline-block w-1.5 h-1.5 bg-black rounded-full animate-bounce" style={{animationDelay:'120ms'}}></span>
-                                <span className="inline-block w-1.5 h-1.5 bg-black rounded-full animate-bounce" style={{animationDelay:'240ms'}}></span>
+                                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}}></span>
+                                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'120ms'}}></span>
+                                <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'240ms'}}></span>
                             </div>
                         </div>
                     </div>
@@ -298,33 +497,146 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                 <div ref={messagesEndRef} />
             </main>
 
-            {/* Footer Input Area (no changes needed here) */}
+            {/* Footer Input Area (no changes) */}
             <footer
                 className="bg-white border-t"
                 style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000, padding: '12px', height: '80px', boxSizing: 'border-box' }}
             >
-                 {/* Attachment Options */}
                  {showAttachmentOptions && (
                     <>
-                        <div className="fixed inset-0 bg-black bg-opacity-25 z-40" onClick={() => setShowAttachmentOptions(false)} aria-hidden="true"></div>
-                        <div role="menu" className="absolute bottom-full right-4 mb-2 bg-white rounded-xl shadow-lg p-2 z-50 w-48 border border-gray-100">
-                            <button role="menuitem" onClick={handleUploadClick} className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"><ImageIcon className="w-5 h-5" /><span>Upload Picture</span></button>
-                            <button role="menuitem" onClick={handleTakePhotoClick} className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors"><CameraIcon className="w-5 h-5" /><span>Take Photo</span></button>
+                        <div 
+                            className="fixed inset-0 bg-black bg-opacity-25 transition-opacity duration-200" 
+                            onClick={() => setShowAttachmentOptions(false)} 
+                            aria-hidden="true" 
+                            style={{ 
+                                zIndex: 1010,
+                                animation: 'fadeIn 0.2s ease-out forwards'
+                            }}
+                        ></div>
+                        <div 
+                            role="menu" 
+                            className="absolute bottom-full right-4 mb-2 bg-white rounded-xl shadow-lg p-2 w-48 border border-gray-100" 
+                            style={{ 
+                                zIndex: 1020,
+                                animation: 'slideUpFade 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                                transformOrigin: 'bottom right'
+                            }}
+                        >
+                            <button role="menuitem" onClick={handleUploadClick} className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200 hover:scale-105 active:scale-95"><ImageIcon className="w-5 h-5" /><span>Upload Picture</span></button>
+                            <button role="menuitem" onClick={handleTakePhotoClick} className="w-full flex items-center gap-3 text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200 hover:scale-105 active:scale-95"><CameraIcon className="w-5 h-5" /><span>Take Photo</span></button>
                         </div>
                     </>
                 )}
-                 {/* Emoji Picker */}
-                 {showEmojiPicker && <EmojiPicker onEmojiSelect={handleEmojiClick} onClose={() => setShowEmojiPicker(false)} />}
+                 {showEmojiPicker && (
+                    <div style={{ animation: 'slideUpFade 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards' }}>
+                        <EmojiPicker onEmojiSelect={handleEmojiClick} onClose={() => setShowEmojiPicker(false)} style={{ zIndex: 1020 }} />
+                    </div>
+                 )}
                 {/* Input Form */}
-                <form onSubmit={handleFormSubmit} className="flex items-center bg-gray-100 rounded-full p-2">
-                     <button type="button" onClick={() => setShowEmojiPicker(prev => !prev)} className="p-2 text-gray-500 hover:text-gray-700" aria-label="Add emoji"><EmojiIcon className="w-6 h-6" /></button>
-                     <input type="text" placeholder="Type your Message..." className="flex-1 bg-transparent border-none outline-none px-2 text-gray-800 placeholder-gray-500 min-w-0" aria-label="Message input" value={message} onChange={(e) => setMessage(e.target.value)} onFocus={() => { setShowEmojiPicker(false); setShowAttachmentOptions(false); }} />
+                <form onSubmit={handleFormSubmit} className="flex items-center bg-gray-100 rounded-full p-2 relative">
+                     <button type="button" onClick={() => setShowEmojiPicker(prev => !prev)} className="p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Add emoji"><EmojiIcon className="w-6 h-6" /></button>
+                     <input 
+                         ref={inputFieldRef}
+                         type="text" 
+                         placeholder="Type your Message..." 
+                         className="flex-1 bg-transparent border-none outline-none px-2 text-gray-800 placeholder-gray-500 min-w-0" 
+                         aria-label="Message input" 
+                         value={message} 
+                         onChange={(e) => setMessage(e.target.value)} 
+                         onFocus={() => { setShowEmojiPicker(false); setShowAttachmentOptions(false); }} 
+                     />
                      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" aria-hidden="true" />
                      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" aria-hidden="true" />
-                     <button type="button" onClick={handleAttachmentClick} className="p-2 text-gray-500 hover:text-gray-700" aria-label="Attach file" aria-haspopup="true" aria-expanded={showAttachmentOptions}><PaperclipIcon className="w-6 h-6" /></button>
-                     <button type="submit" disabled={isLoading || isHistoryLoading} className={`ml-2 text-white rounded-full p-3 transition-colors shadow-lg ${isLoading || isHistoryLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/30'}`} aria-label="Send message"><SendIcon className="w-5 h-5" /></button>
+                     <button type="button" onClick={handleAttachmentClick} className="p-2 text-gray-500 hover:text-gray-700 transition-colors duration-200" aria-label="Attach file" aria-haspopup="true" aria-expanded={showAttachmentOptions}><PaperclipIcon className="w-6 h-6" /></button>
+                     <button type="submit" disabled={isLoading || isHistoryLoading} className={`ml-2 text-white rounded-full p-3 transition-all duration-300 shadow-lg transform active:scale-95 ${isLoading || isHistoryLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/30 hover:scale-105'}`} aria-label="Send message"><SendIcon className="w-5 h-5" /></button>
                  </form>
             </footer>
+
+            {/* CSS Animations */}
+            <style>{`
+                @keyframes popInFromInput {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(60px) translateX(-20px) scale(0.3);
+                    }
+                    60% {
+                        opacity: 1;
+                        transform: translateY(-5px) translateX(0) scale(1.05);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateY(0) translateX(0) scale(1);
+                    }
+                }
+
+                @keyframes slideInLeft {
+                    0% {
+                        opacity: 0;
+                        transform: translateX(-30px) scale(0.9);
+                    }
+                    60% {
+                        opacity: 1;
+                        transform: translateX(2px) scale(1.02);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateX(0) scale(1);
+                    }
+                }
+
+                @keyframes fadeIn {
+                    0% {
+                        opacity: 0;
+                    }
+                    100% {
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes slideUpFade {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(10px) scale(0.95);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                }
+
+                /* Smooth hover effect for message bubbles */
+                .max-w-xs:hover, .max-w-md:hover, .max-w-lg:hover {
+                    transform: scale(1.02) !important;
+                }
+
+                /* Smooth scroll behavior */
+                main {
+                    scroll-behavior: smooth;
+                }
+
+                /* Sending animation overlay */
+                @keyframes textFlyUp {
+                    0% {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: translateY(-100px) scale(0.5);
+                    }
+                }
+
+                /* Smooth transitions for all interactive elements */
+                button, a, input {
+                    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+
+                /* Backdrop blur for expanded messages */
+                .backdrop-blur {
+                    backdrop-filter: blur(3px);
+                    transition: backdrop-filter 0.3s ease;
+                }
+            `}</style>
         </div>
     );
 };
