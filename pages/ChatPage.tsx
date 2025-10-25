@@ -45,6 +45,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
     const [expandedMessageIndex, setExpandedMessageIndex] = useState<number | null>(null);
     const [isOnline, setIsOnline] = useState<boolean>(false);
     const [isInitialCheck, setIsInitialCheck] = useState<boolean>(true); // Track initial check
+    const [showNewChatConfirm, setShowNewChatConfirm] = useState(false);
 
 
     // --- State for current session ID ---
@@ -245,30 +246,69 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
             inputFieldRef.current?.focus();
         }
     };
+    const handleNewChat = () => {
+        setShowNewChatConfirm(true);
+    };
 
 
     // --- Handle New Chat Button (modified to call fetchHistory) ---
-    const handleNewChat = async () => {
-        const userConfirmed = window.confirm(
-        "Starting a new chat will clear your current conversation history. Are you sure you want to proceed?"
-        );
-        if (!userConfirmed) {
-            return; // Stop if the user cancels
-        }
-        console.log("Starting new chat session...");
+    // const handleNewChat = async () => {
+    //     const userConfirmed = window.confirm(
+    //     "Starting a new chat will clear your current conversation history. Are you sure you want to proceed?"
+    //     );
+    //     if (!userConfirmed) {
+    //         return; // Stop if the user cancels
+    //     }
+    //     console.log("Starting new chat session...");
+    //     const phoneNumber = localStorage.getItem('phoneNumber');
+    //     const newSessionId = generateSessionId(phoneNumber);
+
+    //     localStorage.setItem('activeChatSessionId', newSessionId);
+    //     setCurrentSessionId(newSessionId);
+        
+    //     setIsHistoryLoading(true); // Show loading spinner
+    //     setMessages([]); // Clear messages immediately
+    //     setMessage('');
+    //     setError('');
+    //     setExpandedMessageIndex(null); // Reset expanded message
+
+    //     // If offline, show offline message and return
+    //     if (!isOnline) {
+    //         setIsHistoryLoading(false);
+    //         setMessages([{ role: 'assistant', content: "I'm sleeping, come back later -Your Seri" }]);
+    //         return;
+    //     }
+
+    //     try {
+    //         // Fetch history for the *new* session (which will return the initial greeting from backend)
+    //         await fetchHistory(newSessionId); // This will set messages and stop loading
+
+    //     } catch (err) {
+    //         console.error("Failed to start new chat:", err);
+    //         setError("Could not start a new chat session.");
+    //         setMessages([{ role: 'assistant', content: "Okay, let's start fresh. What's on your mind?" }]); // Fallback greeting
+    //         setIsHistoryLoading(false); // Stop loading on error
+    //     }
+    // };
+    // // -----------------------------------
+
+
+    const confirmNewChat = async () => {
+        setShowNewChatConfirm(false); // Close modal
+        console.log("Starting new chat session after confirmation...");
+        // --- Existing new chat logic ---
         const phoneNumber = localStorage.getItem('phoneNumber');
         const newSessionId = generateSessionId(phoneNumber);
 
         localStorage.setItem('activeChatSessionId', newSessionId);
         setCurrentSessionId(newSessionId);
-        
-        setIsHistoryLoading(true); // Show loading spinner
-        setMessages([]); // Clear messages immediately
+
+        setIsHistoryLoading(true);
+        setMessages([]);
         setMessage('');
         setError('');
-        setExpandedMessageIndex(null); // Reset expanded message
+        setExpandedMessageIndex(null);
 
-        // If offline, show offline message and return
         if (!isOnline) {
             setIsHistoryLoading(false);
             setMessages([{ role: 'assistant', content: "I'm sleeping, come back later -Your Seri" }]);
@@ -276,17 +316,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
         }
 
         try {
-            // Fetch history for the *new* session (which will return the initial greeting from backend)
-            await fetchHistory(newSessionId); // This will set messages and stop loading
-
+            await fetchHistory(newSessionId);
         } catch (err) {
             console.error("Failed to start new chat:", err);
             setError("Could not start a new chat session.");
-            setMessages([{ role: 'assistant', content: "Okay, let's start fresh. What's on your mind?" }]); // Fallback greeting
-            setIsHistoryLoading(false); // Stop loading on error
+            setMessages([{ role: 'assistant', content: "Okay, let's start fresh. What's on your mind?" }]);
+            setIsHistoryLoading(false);
         }
+        // --- End existing logic ---
     };
-    // -----------------------------------
+
+    // --- Function to cancel creating a new chat ---
+    const cancelNewChat = () => {
+        setShowNewChatConfirm(false); // Close modal
+    };
 
     // --- Other Handlers (no changes) ---
      const isMobile = () => /Mobi/i.test(navigator.userAgent);
@@ -619,94 +662,95 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                  </form>
             </footer>
 
-            {/* CSS Animations */}
-            <style>{`
-                @keyframes popInFromInput {
-                    0% {
-                        opacity: 0;
-                        transform: translateY(60px) translateX(-20px) scale(0.3);
-                    }
-                    60% {
-                        opacity: 1;
-                        transform: translateY(-5px) translateX(0) scale(1.05);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateY(0) translateX(0) scale(1);
-                    }
-                }
+            {showNewChatConfirm && (
+                <div
+                    className="fixed inset-0 z-[1050] flex items-center justify-center p-4 bg-black bg-opacity-50 transition-opacity duration-300 ease-out"
+                    // Add fade-in animation for overlay
+                    style={{ animation: 'fadeIn 0.3s ease-out forwards' }}
+                    onClick={cancelNewChat} // Close if clicking overlay
+                >
+                    <div
+                        className="bg-white rounded-3xl shadow-xl p-6 w-full max-w-sm transition-all duration-300 ease-out transform scale-95 opacity-0"
+                        // Add scale/fade-in animation for modal box
+                        style={{ animation: 'scaleUpFade 0.3s ease-out 0.1s forwards' }}
+                        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+                    >
+                        <h3 className="text-lg font-semibold font-poppins text-center text-gray-800 mb-2">Start New Chat?</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Starting a new chat will clear your current conversation history. Are you sure you want to proceed?
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={cancelNewChat}
+                                className="px-4 py-2 rounded-full text-sm font-medium text-gray-800 bg-gray-400 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmNewChat}
+                                className="px-4 py-2 rounded-full text-sm font-medium text-white bg-blue-600 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                            >
+                                OK, proceed
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* --- End New Chat Modal --- */}
 
+            {/* --- MODIFIED STYLE BLOCK to include modal animations --- */}
+            <style>{`
+                /* ... (Existing keyframes: popInFromInput, slideInLeft) ... */
+                @keyframes popInFromInput {
+                    0% { opacity: 0; transform: translateY(60px) translateX(-20px) scale(0.3); }
+                    60% { opacity: 1; transform: translateY(-5px) translateX(0) scale(1.05); }
+                    100% { opacity: 1; transform: translateY(0) translateX(0) scale(1); }
+                }
                 @keyframes slideInLeft {
-                    0% {
-                        opacity: 0;
-                        transform: translateX(-30px) scale(0.9);
-                    }
-                    60% {
-                        opacity: 1;
-                        transform: translateX(2px) scale(1.02);
-                    }
-                    100% {
-                        opacity: 1;
-                        transform: translateX(0) scale(1);
-                    }
+                    0% { opacity: 0; transform: translateX(-30px) scale(0.9); }
+                    60% { opacity: 1; transform: translateX(2px) scale(1.02); }
+                    100% { opacity: 1; transform: translateX(0) scale(1); }
                 }
 
                 @keyframes fadeIn {
-                    0% {
-                        opacity: 0;
-                    }
-                    100% {
-                        opacity: 1;
-                    }
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
 
-                @keyframes slideUpFade {
-                    0% {
+                @keyframes scaleUpFade {
+                     from {
                         opacity: 0;
-                        transform: translateY(10px) scale(0.95);
-                    }
-                    100% {
+                        transform: scale(0.95);
+                     }
+                     to {
                         opacity: 1;
-                        transform: translateY(0) scale(1);
-                    }
+                        transform: scale(1);
+                     }
                 }
 
-                /* Smooth hover effect for message bubbles */
-                .max-w-xs:hover, .max-w-md:hover, .max-w-lg:hover {
+                @keyframes slideUpFade { /* For Emoji/Attachment popups */
+                    0% { opacity: 0; transform: translateY(10px) scale(0.95); }
+                    100% { opacity: 1; transform: translateY(0) scale(1); }
+                }
+
+                main { scroll-behavior: smooth; }
+
+                /* ... (Existing styles for hover, backdrop, etc.) ... */
+                 .max-w-xs:hover, .max-w-md:hover, .max-w-lg:hover {
                     transform: scale(1.02) !important;
                 }
-
-                /* Smooth scroll behavior */
-                main {
-                    scroll-behavior: smooth;
-                }
-
-                /* Sending animation overlay */
-                @keyframes textFlyUp {
-                    0% {
-                        opacity: 1;
-                        transform: translateY(0) scale(1);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translateY(-100px) scale(0.5);
-                    }
-                }
-
-                /* Smooth transitions for all interactive elements */
-                button, a, input {
+                 button, a, input {
                     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 }
-
-                /* Backdrop blur for expanded messages */
-                .backdrop-blur {
+                 .backdrop-blur {
                     backdrop-filter: blur(3px);
                     transition: backdrop-filter 0.3s ease;
                 }
             `}</style>
+            {/* --------------------------- */}
+
         </div>
     );
 };
-
 
 export default ChatPage;
