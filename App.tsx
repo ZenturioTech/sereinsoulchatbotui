@@ -1,6 +1,7 @@
 // ./frontend/App.tsx
 import React, { useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { AnimatePresence, motion } from 'framer-motion';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
@@ -15,6 +16,27 @@ interface DecodedToken {
     iat: number;
     exp: number;
 }
+
+const pageVariants = {
+  initial: {
+    opacity: 0,
+    y: '100vw', // Slide in from the left
+  },
+  in: {
+    opacity: 1,
+    y: 0,
+  },
+  out: {
+    opacity: 0,
+    y: '-100vw', // Slide out to the right
+  },
+};
+
+const pageTransition = {
+  type: 'tween',
+  ease: 'anticipate',
+  duration: 0.35,
+};
 
 const App: React.FC = () => {
   const [page, setPage] = useState<'home' | 'signIn' | 'chat' | 'subscription'| 'admin'>('home'); // Initialize to 'home'
@@ -142,17 +164,61 @@ const App: React.FC = () => {
 
   // --- Render Logic ---
   let currentPageComponent;
+
+  // Use the 'page' state as the 'key' for AnimatePresence
+  // to detect when the page changes.
   if (page === 'signIn' && !token) {
-  currentPageComponent = <SignInPage onSignInSuccess={handleSignInSuccess} onAdminSignInSuccess={handleAdminSignInSuccess} />;
-  }  else if (page === 'chat' && token) {
-    currentPageComponent = <ChatPage onUpgrade={handleUpgrade} token={token} onBackToHome={handleBackToHome} />;
+    currentPageComponent = (
+      <motion.div
+        key="signIn"
+        initial="initial"
+        animate="in"
+        exit="out"
+        variants={pageVariants}
+        transition={pageTransition}
+      >
+        <SignInPage onSignInSuccess={handleSignInSuccess} onAdminSignInSuccess={handleAdminSignInSuccess} />
+      </motion.div>
+    );
+  } else if (page === 'chat' && token) {
+    currentPageComponent = (
+      <motion.div
+        key="chat"
+        initial="initial"
+        animate="in"
+        exit="out"
+        variants={pageVariants}
+        transition={pageTransition}
+      >
+        <ChatPage onUpgrade={handleUpgrade} token={token} onBackToHome={handleBackToHome} />
+      </motion.div>
+    );  
   } else if (page === 'subscription' && token) {
-    currentPageComponent = <SubscriptionPage onBackToChat={handleBackToChat} />;
+      currentPageComponent = (
+        <motion.div
+          key="subscription"
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={pageVariants}
+          transition={pageTransition}
+        > 
+          <SubscriptionPage onBackToChat={handleBackToChat} />;
+        </motion.div>
+      );
   } else if (page === 'admin' && token) {
       currentPageComponent = <AdminPage token={token} onSignOut={handleSignOut} />;
   } else {
     // Default to rendering the home page for 'home' state or any unexpected state
     currentPageComponent = (
+       <motion.div
+        key="home"
+        initial="initial"
+        animate="in"
+        exit="out"
+        variants={pageVariants}
+        transition={pageTransition}
+       >
         <div className="min-h-screen bg-[#f0f4f8] flex flex-col items-center font-sans">
             <div className="w-full max-w-[1440px] p-4 sm:p-6 md:p-8 lg:p-12">
                 <Header
@@ -166,6 +232,7 @@ const App: React.FC = () => {
                 <Footer />
             </div>
         </div>
+        </motion.div>
      );
      // If the state somehow got stuck on something invalid, force navigate back to home
      if (page === 'admin' && (!token || !isAdmin)) navigate('home');
@@ -175,7 +242,7 @@ const App: React.FC = () => {
      else if (page !== 'home' && page !== 'admin' && page !== 'chat' && page !== 'subscription' && page !== 'signIn') navigate('home');
   }
 
-  return currentPageComponent; // Render the determined component
+  return <AnimatePresence mode="wait">{currentPageComponent}</AnimatePresence>;
 }
 
 export default App;
