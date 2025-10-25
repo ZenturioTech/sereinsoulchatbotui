@@ -450,7 +450,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
             {/* Header (no changes) */}
             <header
                 className="flex items-center justify-between p-3 border-b border-gray-200 bg-white"
-                style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, height: '72px', transform: 'translateY(0)', transformOrigin: 'top', willChange: 'transform' }}
+                style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, height: '72px' }}
             >
                 {/* ... (header content) ... */}
                  <div className="flex items-center"> {/* Reduced space */}
