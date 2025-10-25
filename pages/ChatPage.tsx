@@ -676,19 +676,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                         onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
                     >
                         <h3 className="text-lg font-semibold font-poppins text-center text-gray-800 mb-2">Start New Chat?</h3>
-                        <p className="text-sm text-gray-600  text-justify mb-4">
+                        <p className="text-md text-gray-600 mb-4 text-centre">
                             Starting a new chat will clear your current conversation history. Are you sure you want to proceed?
                         </p>
                         <div className="flex justify-end space-x-3">
                             <button
                                 onClick={cancelNewChat}
-                                className="px-4 py-2 rounded-full text-sm font-medium text-gray-800 bg-gray-200 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
+                                className="px-4 py-2 rounded-full text-md font-medium text-gray-800 bg-gray-200 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmNewChat}
-                                className="px-4 py-2 rounded-full text-sm font-medium text-white bg-blue-600 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                                className="px-4 py-2 rounded-full text-md font-medium text-white bg-blue-600 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                             >
                                 OK, proceed
                             </button>
