@@ -2,12 +2,24 @@ import React, { useState } from 'react';
 import SignInForm from '../components/SignInForm';
 import OtpForm from '../components/OtpForm';
 import TermsAgreement from '../components/TermsAgreement';
-import DetailsForm from '../components/DetailsForm'; // <-- NEW: Import the details form
+import DetailsForm from '../components/DetailsForm'; 
+import { AnimatePresence, motion } from 'framer-motion';
 import SereinSoulLogo from '../components/icons/SereinSoulLogo';
 
 interface SignInPageProps {
   onSignInSuccess: (token: string) => void;
-}
+}const formVariants = {
+  initial: { opacity: 0, y: 20 },
+  in: { opacity: 1, y: 0 },
+  out: { opacity: 0, y: -20 },
+};
+
+const formTransition = {
+  duration: 0.3,
+  ease: 'easeInOut',
+};
+
+
 
 const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
 
@@ -90,17 +102,45 @@ const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess, onAdminSignInS
     setStep('signIn');
   };
 
+  let formComponent;
+  if (step === 'signIn') {
+    formComponent = (
+      <motion.div key="signIn" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
+        <SignInForm onOtpSent={handleOtpSent} />
+      </motion.div>
+    );
+  } else if (step === 'otp') {
+    formComponent = (
+      <motion.div key="otp" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
+        <OtpForm mobileNumber={mobileNumber} onVerify={handleVerify} onBack={handleBack} />
+      </motion.div>
+    );
+  } else if (step === 'terms') {
+    formComponent = (
+      <motion.div key="terms" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
+        <TermsAgreement onContinue={handleContinue} />
+      </motion.div>
+    );
+  } else if (step === 'details') {
+    formComponent = (
+      <motion.div key="details" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
+        <DetailsForm onSubmit={handleDetailsSubmit} />
+      </motion.div>
+    );
+  }
+
   return (
     <div 
-        className="min-h-screen bg-white flex items-center justify-center p-4 font-sans relative"
+        className="min-h-screen bg-white flex items-center justify-center p-4..."
         role="main"
     >
         <SereinSoulLogo className="absolute top-8 left-8 w-40 md:w-64 h-auto" />
         <div className="transition-all duration-300 w-full max-w-lg">
-            {step === 'signIn' && <SignInForm onOtpSent={handleOtpSent} />}
-            {step === 'otp' && <OtpForm mobileNumber={mobileNumber} onVerify={handleVerify} onBack={handleBack} />}
-            {step === 'terms' && <TermsAgreement onContinue={handleContinue} />}
-            {step === 'details' && <DetailsForm onSubmit={handleDetailsSubmit} />}
+            <div className="w-full max-w-lg">
+          <AnimatePresence mode="wait">
+            {formComponent}
+          </AnimatePresence>
+        </div>
             {error && <p className="text-red-500 text-center mt-4">{error}</p>}
         </div>
     </div>
