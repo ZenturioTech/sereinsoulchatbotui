@@ -1,150 +1,122 @@
+// ./frontend/components/SignInForm.tsx
 import React, { useState } from 'react';
-import SignInForm from '../components/SignInForm';
-import OtpForm from '../components/OtpForm';
-import TermsAgreement from '../components/TermsAgreement';
-import DetailsForm from '../components/DetailsForm'; 
-import { AnimatePresence, motion } from 'framer-motion';
-import SereinSoulLogo from '../components/icons/SereinSoulLogo';
+import SignInIcon from './icons/SignInIcon';
 
-interface SignInPageProps {
-  onSignInSuccess: (token: string) => void;
-}const formVariants = {
-  initial: { opacity: 0, y: 20 },
-  in: { opacity: 1, y: 0 },
-  out: { opacity: 0, y: -20 },
-};
+interface SignInFormProps {
+  onOtpSent: (mobileNumber: string) => void;
+}
 
-const formTransition = {
-  duration: 0.3,
-  ease: 'easeInOut',
-};
-
-
-
+// --- Load the API Key here ---
 const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
+// -----------------------------
+const SignInForm: React.FC<SignInFormProps> = ({ onOtpSent }) => {
+  const [mobileNumber, setMobileNumber] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false); // Add loading state
 
-const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess, onAdminSignInSuccess }) => { // <-- Add new prop
-  const [step, setStep] = useState<'signIn' | 'otp' | 'terms' | 'details'>('signIn');
-  const [mobileNumber, setMobileNumber] = useState('');
-  const [error, setError] = useState('');
-  const [isAdminLogin, setIsAdminLogin] = useState(false); // <-- NEW: State to track admin status
-
-  const handleOtpSent = (number: string) => {
-    setMobileNumber(number);
-    setStep('otp'); // This should change the view to OtpForm
-  };
-  // --- MODIFIED: handleVerify ---
-  const handleVerify = (token: string, isAdmin: boolean) => { // Receive isAdmin flag
-    console.log(`OTP Verified! Admin: ${isAdmin}. Storing token.`);
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('phoneNumber', `+91${mobileNumber}`);
-    setIsAdminLogin(isAdmin); // Store admin status
-
-    // Decide next step based on admin status
-    if (isAdmin) {
-      console.log("Admin user detected, skipping terms/details, calling onAdminSignInSuccess.");
-      onAdminSignInSuccess(token); // Redirect admin immediately
-    } else {
-      console.log("Regular user, proceeding to terms.");
-      setStep('terms'); // Regular users go to terms
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (mobileNumber.length !== 10) {
+      setError('Please enter a valid 10-digit mobile number.');
+      return;
     }
-  };
-  // -----------------------------
-  
-  const handleContinue = () => {
-    console.log('Terms Agreed! Proceeding to details form.');
-    setStep('details'); // <-- NEW: Go to details form after terms
-  }
+    setError(null);
+    setIsLoading(true); // Start loading
 
-  // --- NEW: Handler for the details form submission ---
-  const handleDetailsSubmit = async (details: { name?: string; age?: number; gender?: string }) => {
-    console.log('Submitting user details:', details);
-    setError(''); // Clear previous errors
-    
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-        setError('Authentication error. Please sign in again.');
-        setStep('signIn'); // Go back to login on error
-        return;
-    }
+    // --- Log the key before sending ---
+    console.log("SignInForm attempting to send GATEKEEPER_API_KEY:", GATEKEEPER_API_KEY);
+    // ------------------------------------
 
-    console.log("Attempting to send GATEKEEPER_API_KEY:", GATEKEEPER_API_KEY);
-
+    const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080'; // Use VITE_API_URL
     try {
-        const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
-        const response = await fetch(`${apiBase}/api/user/profile`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'x-api-key': GATEKEEPER_API_KEY
-            },
-            body: JSON.stringify(details)
-        });
+      const res = await fetch(`${apiBase}/api/auth/otp/send`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': GATEKEEPER_API_KEY // Send the API key header
+        },
+        body: JSON.stringify({ phone_number: `+91${mobileNumber}` })
+      });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to save details.');
+      if (!res.ok) {
+        let errorMsg = `Failed to send OTP (Status: ${res.status})`;
+        let errorData = null;
+        try {
+            // Try to parse error JSON from backend
+            errorData = await res.json();
+            errorMsg = errorData.error || errorMsg;
+            console.error("SignInForm: Non-OK response JSON:", errorData);
+        } catch (jsonError) {
+            // If response isn't JSON, read as text
+            const textError = await res.text();
+            errorMsg += `: ${textError || 'No further details'}`;
+            console.error("SignInForm: Non-OK response Text:", textError);
         }
+        throw new Error(errorMsg);
+      }
 
-        console.log('Details saved successfully! Welcome!');
-        onSignInSuccess(token); // Final step: proceed to chat page
+      // If res.ok is true:
+      const responseData = await res.json();
+      console.log("SignInForm: OTP Request Successful:", responseData?.message);
+      onOtpSent(mobileNumber); // <-- This should now be called if status is OK
 
     } catch (err: any) {
-        console.error('Error submitting details:', err);
-        setError(err.message || 'An unexpected error occurred.');
-        // Optionally, you can keep the user on the details page to retry
+      // This catches network errors (fetch failed) OR errors thrown above
+      console.error("SignInForm: Error during OTP request:", err);
+      setError(err?.message || 'Failed to send OTP. Check console/network tab.');
+    } finally {
+        setIsLoading(false);
     }
   };
-  // ----------------------------------------------------
 
-  const handleBack = () => {
-    setStep('signIn');
+  const handleMobileNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (error) {
+      setError(null);
+    }
+    setMobileNumber(e.target.value.replace(/\D/g, '')); // Allow only digits
   };
 
-  let formComponent;
-  if (step === 'signIn') {
-    formComponent = (
-      <motion.div key="signIn" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
-        <SignInForm onOtpSent={handleOtpSent} />
-      </motion.div>
-    );
-  } else if (step === 'otp') {
-    formComponent = (
-      <motion.div key="otp" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
-        <OtpForm mobileNumber={mobileNumber} onVerify={handleVerify} onBack={handleBack} />
-      </motion.div>
-    );
-  } else if (step === 'terms') {
-    formComponent = (
-      <motion.div key="terms" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
-        <TermsAgreement onContinue={handleContinue} />
-      </motion.div>
-    );
-  } else if (step === 'details') {
-    formComponent = (
-      <motion.div key="details" variants={formVariants} initial="initial" animate="in" exit="out" transition={formTransition}>
-        <DetailsForm onSubmit={handleDetailsSubmit} />
-      </motion.div>
-    );
-  }
-
   return (
-    <div 
-        className="min-h-screen bg-white flex items-center justify-center p-4..."
-        role="main"
-    >
-        <SereinSoulLogo className="absolute top-8 left-8 w-40 md:w-64 h-auto" />
-        <div className="transition-all duration-300 w-full max-w-lg">
-            <div className="w-full max-w-lg">
-          <AnimatePresence mode="wait">
-            {formComponent}
-          </AnimatePresence>
+    <div className="bg-white rounded-[2.5rem] shadow-2xl px-8 sm:px-12 py-12 sm:py-16 w-full max-w-sm transform transition-all duration-500 hover:shadow-3xl mx-auto">
+      <div className="flex items-center justify-center gap-3 mb-10">
+        <SignInIcon className="w-8 h-8 text-blue-500" />
+        <h1 className="text-3xl font-bold text-blue-500">Sign in</h1>
+      </div>
+
+      <form onSubmit={handleSubmit} className="w-full space-y-6" noValidate>
+        <div>
+          <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-2">
+            Enter Mobile number
+          </label>
+          <div className={`flex items-center border ${error ? 'border-red-500' : 'border-gray-200'} rounded-xl focus-within:ring-2 ${error ? 'focus-within:ring-red-400' : 'focus-within:ring-blue-400'} focus-within:border-transparent transition-all bg-white px-3 shadow-sm`}>
+            <span className="text-gray-500 text-base">+91-</span>
+            <input
+              type="tel" // Use tel for mobile numbers
+              id="mobile"
+              name="mobile"
+              value={mobileNumber}
+              onChange={handleMobileNumberChange}
+              maxLength={10}
+              placeholder="XXXXXXXXXX"
+              className="w-full py-3 bg-transparent border-none outline-none text-gray-800 placeholder-gray-400 ml-2 text-base tracking-wider"
+              required
+              aria-invalid={!!error}
+              aria-describedby="mobile-error"
+            />
+          </div>
+          {error && <p id="mobile-error" className="text-red-500 text-xs mt-2">{error}</p>}
         </div>
-            {error && <p className="text-red-500 text-center mt-4">{error}</p>}
-        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading} // Disable button while loading
+          className={`w-full text-white font-semibold py-3 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 shadow-lg ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 shadow-blue-500/30 hover:shadow-blue-500/50'}`}
+        >
+          {isLoading ? 'Sending...' : 'Send OTP'}
+        </button>
+      </form>
     </div>
   );
 };
 
-export default SignInPage;
+export default SignInForm;
