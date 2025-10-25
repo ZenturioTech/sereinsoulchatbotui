@@ -16,6 +16,7 @@ import PlusIcon from '../components/icons/PlusIcon'; // Make sure this import is
 interface ChatPageProps {
     onUpgrade: () => void;
     token: string;
+    onBackToHome: () => void;
 }
 
 interface Message {
@@ -32,7 +33,7 @@ const generateSessionId = (phoneNumber: string | null): string => {
 };
 
 
-const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) => {
     const avatarSrc = "images/ssgirl1.png";
     const [messages, setMessages] = useState<Message[]>([]);
     const [message, setMessage] = useState('');
@@ -248,6 +249,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
 
     // --- Handle New Chat Button (modified to call fetchHistory) ---
     const handleNewChat = async () => {
+        const userConfirmed = window.confirm(
+        "Starting a new chat will clear your current conversation history. Are you sure you want to proceed?"
+        );
+        if (!userConfirmed) {
+            return; // Stop if the user cancels
+        }
         console.log("Starting new chat session...");
         const phoneNumber = localStorage.getItem('phoneNumber');
         const newSessionId = generateSessionId(phoneNumber);
@@ -403,13 +410,24 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                 style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, height: '72px', transform: 'translateY(0)', transformOrigin: 'top', willChange: 'transform' }}
             >
                 {/* ... (header content) ... */}
-                 <div className="flex items-center space-x-3">
+                 <div className="flex items-center"> {/* Reduced space */}
+                    {/* Back Button */}
+                    <button
+                        onClick={onBackToHome} // <-- CALL PROP ON CLICK
+                        className=" text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                        title="Back to Home"
+                        aria-label="Back to Home"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                        </svg>
+                    </button>
                      <img className="w-12 h-12 rounded-full object-cover" src={avatarSrc} alt="Sereine's avatar" />
                      <div>
                          <h2 className="text-lg font-semibold text-gray-800">Seri</h2>
                          <div className="flex items-center gap-2">
                             <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-gray-700">
                                 {isOnline ? 'Active now' : 'Offline'}
                             </span>
                         </div>
@@ -419,7 +437,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
                  <div className="flex items-center space-x-3">
                      <button
                          onClick={handleNewChat}
-                         className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                         className="p text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                          title="Start New Chat"
                          aria-label="Start New Chat"
                          disabled={isLoading || isHistoryLoading}

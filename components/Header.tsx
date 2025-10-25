@@ -14,15 +14,17 @@ const Header: React.FC<HeaderProps> = ({ isAuthenticated, onSignInClick, onSignO
         <SereinSoulLogo className="w-54 md:w-96 h-auto" />
       </div>
       {isAuthenticated ? (
-        <button 
+        <button
           onClick={onSignOut}
-          className="bg-gray-500 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors shadow-md text-base md:text-lg">
+          className="bg-gray-500 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors shadow-md text-base md:text-lg whitespace-nowrap"
+        >
           Sign Out
         </button>
+
       ) : (
         <button 
           onClick={onSignInClick}
-          className="bg-[#007BFF] text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-semibold hover:bg-[#0069D9] transition-colors shadow-md text-base md:text-lg">
+          className="bg-blue-700 text-white px-6 py-2 md:px-8 md:py-3 rounded-full font-semibold hover:bg-[#0069D9] transition-colors shadow-md text-base md:text-lg">
           Login/SignUp
         </button>
       )}

@@ -135,13 +135,17 @@ const App: React.FC = () => {
     navigate('chat');
   };
 
+  const handleBackToHome = () => {
+    navigate('home');
+  };
+
 
   // --- Render Logic ---
   let currentPageComponent;
   if (page === 'signIn' && !token) {
   currentPageComponent = <SignInPage onSignInSuccess={handleSignInSuccess} onAdminSignInSuccess={handleAdminSignInSuccess} />;
   }  else if (page === 'chat' && token) {
-    currentPageComponent = <ChatPage onUpgrade={handleUpgrade} token={token} />;
+    currentPageComponent = <ChatPage onUpgrade={handleUpgrade} token={token} onBackToHome={handleBackToHome} />;
   } else if (page === 'subscription' && token) {
     currentPageComponent = <SubscriptionPage onBackToChat={handleBackToChat} />;
   } else if (page === 'admin' && token) {
@@ -166,6 +170,7 @@ const App: React.FC = () => {
      // If the state somehow got stuck on something invalid, force navigate back to home
      if (page === 'admin' && (!token || !isAdmin)) navigate('home');
      if (page === 'chat' && isAdmin) navigate('admin'); // Redirect admin from chat attempt to admin page
+     if (page === 'subscription' && token && isAdmin) navigate('admin');
      else if (page !== 'home' && !token && page !== 'signIn') navigate('home'); // Redirect logged out users from protected pages
      else if (page !== 'home' && page !== 'admin' && page !== 'chat' && page !== 'subscription' && page !== 'signIn') navigate('home');
   }
