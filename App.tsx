@@ -20,7 +20,7 @@ interface DecodedToken {
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: '100vw', // Slide in from the left
+    y: '50vw', // Slide in from the left
   },
   in: {
     opacity: 1,
@@ -28,7 +28,7 @@ const pageVariants = {
   },
   out: {
     opacity: 0,
-    y: '-100vw', // Slide out to the right
+    y: '-50vw', // Slide out to the right
   },
 };
 
