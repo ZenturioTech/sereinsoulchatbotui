@@ -457,7 +457,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                     {/* Back Button */}
                     <button
                         onClick={onBackToHome} // <-- CALL PROP ON CLICK
-                        className=" text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                         title="Back to Home"
                         aria-label="Back to Home"
                     >
