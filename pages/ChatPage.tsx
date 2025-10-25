@@ -62,7 +62,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
         if (!sessionIdToFetch) {
             console.warn("fetchHistory called without a sessionId");
             setIsHistoryLoading(false);
-            setMessages([{ role: 'assistant', content: "Welcome! How can I assist you today?" }]);
+            setMessages([{ role: 'assistant', content: "Hi there! I'm Seri. Just want you to know I'm here for you. Feel free to share whatever's on your mind." }]);
             return;
         }
         console.log(`Fetching chat history for session: ${sessionIdToFetch}`);
@@ -94,7 +94,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                  console.log(`No history found for session ${sessionIdToFetch}, backend should send greeting.`);
                  // We still set messages just in case backend sends empty array
                  if (history.length === 0) {
-                    setMessages([{ role: 'assistant', content: "Welcome! How can I assist you today?" }]);
+                    setMessages([{ role: 'assistant', content: "Hi there! I'm Seri. Just want you to know I'm here for you. Feel free to share whatever's on your mind." }]);
                  }
             }
 
