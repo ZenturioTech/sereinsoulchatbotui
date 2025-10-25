@@ -9,7 +9,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ isAuthenticated, onSignInClick, onSignOut }) => {
   return (
-    <header className="flex justify-between items-center w-full">
+    <header className="flex justify-between items-center w-full" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex items-center gap-2">
         <SereinSoulLogo className="w-54 md:w-96 h-auto" />
       </div>

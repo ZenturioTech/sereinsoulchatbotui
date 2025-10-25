@@ -3,7 +3,7 @@ import React from 'react';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="w-full mt-6 md:py-6 flex justify-center items-center">
+    <footer className="w-full mt-6 md:py-6 flex justify-center items-center" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex gap-8 text-gray-500">
         <a href="#" className="hover:text-blue-600 hover:underline">
           Terms & Conditions

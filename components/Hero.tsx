@@ -22,10 +22,11 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
       <div className="relative">
         {/* Main hero card */}
         <div 
-            className="relative w-full h-[85vh] max-h-[700px] md:h-[720px] bg-cover bg-center text-white p-8 flex flex-col items-center text-center md:flex-row md:items-start md:text-left md:p-12 lg:p-20
-            rounded-[2.5rem] md:rounded-[2.5rem] mobile-cutout overflow-hidden"
+            className="relative w-full h-[85vh] max-h-[700px] md:h-[720px] bg-cover bg-center text-white p-8 flex flex-col items-center text-center md:flex-row md:items-start md:text-left md:p-12 lg:p-20 
+            rounded-[2.5rem] md:rounded-[2.5rem] mobile-cutout overflow-hidden" 
             style={{
-                backgroundImage: 'url(https://i.ibb.co/WWvw6bXN/ssocean-1.png)'
+                backgroundImage: 'url(https://i.ibb.co/WWvw6bXN/ssocean-1.png)',
+                fontFamily: "'Poppins', sans-serif"
             }}
         >
             
@@ -68,7 +69,7 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
         </div>
 
         {/* Desktop "Start Healing" button */}
-        <div className="hidden absolute bottom-0 left-0 z-20 md:block">
+        <div className="hidden absolute bottom-0 left-0 z-20 md:block" style={{ fontFamily: "'Poppins', sans-serif" }}>
             <button 
                 onClick={onStartHealing}
                 className="relative bg-[#a8d0f1] text-[#0D244F] w-48 h-48 rounded-tr-[2.5rem] rounded-br-[2.5rem] rounded-bl-[2.5rem] shadow-[inset_5px_5px_10px_#86a7c1,inset_-5px_-5px_10px_#caffff] flex flex-col items-center justify-center gap-2 transition-transform hover:scale-105 active:scale-95">
@@ -76,7 +77,7 @@ const Hero: React.FC<HeroProps> = ({ onStartHealing }) => {
                    <ArrowIcon />
                 </div>
                 <HealingIcon />
-                <span className="text-2xl font-semibold text-black">Start Healing</span>
+                <span className="text-2xl font-semibold text-black" >Start Healing</span>
             </button>
         </div>
 

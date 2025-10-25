@@ -53,7 +53,7 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
   };
 
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-2xl px-8 sm:px-12 py-12 sm:py-16 w-full max-w-sm transform transition-all duration-500 hover:shadow-3xl mx-auto">
+    <div className="bg-white rounded-[2.5rem] shadow-2xl px-8 sm:px-12 py-12 sm:py-16 w-full max-w-sm transform transition-all duration-500 hover:shadow-3xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex flex-col items-center justify-center gap-4 mb-8 text-center">
         <OtpIcon className="w-10 h-10 text-blue-500" />
         <h1 className="text-3xl font-bold text-blue-500">OTP Verification</h1>

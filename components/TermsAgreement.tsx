@@ -7,7 +7,7 @@ interface TermsAgreementProps {
 
 const TermsAgreement: React.FC<TermsAgreementProps> = ({ onContinue }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-2xl p-8 sm:p-12 w-full max-w-md sm:max-w-lg text-center transform transition-all duration-500 hover:shadow-3xl flex flex-col items-center">
+    <div className="bg-white rounded-2xl shadow-2xl p-8 sm:p-12 w-full max-w-md sm:max-w-lg text-center transform transition-all duration-500 hover:shadow-3xl flex flex-col items-center" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <ShieldIcon className="w-24 h-24 mb-6 text-blue-500" />
       <p className="text-gray-900 mb-8">
         By continuing, you agree to <span className="font-semibold">Sereinsoul</span>{' '}

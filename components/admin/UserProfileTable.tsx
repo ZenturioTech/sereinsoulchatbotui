@@ -9,7 +9,6 @@ interface UserProfile {
     age?: number | null;
     gender?: string | null;
     lastUpdatedAt?: string;
-    // Add other fields from your sensitiveDataMap as needed
     educationalQualification?: string | null;
     occupation?: string | null;
     religion?: string | null;

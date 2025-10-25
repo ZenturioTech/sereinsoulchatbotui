@@ -11,7 +11,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ token, onSignOut }) => {
     // Removed selectedSessionId state and handleUserSelect function
 
     return (
-        <div className="flex h-screen bg-gray-100 font-sans">
+        <div className="flex h-screen bg-gray-100 " style={{ fontFamily: "'Poppins', sans-serif" }}>
             {/* Sidebar (Optional - could be removed if not needed for navigation) */}
             <aside className="w-64 bg-white p-4 border-r flex flex-col">
                 <SereinSoulLogo className="w-40 mb-6" />

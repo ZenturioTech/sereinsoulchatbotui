@@ -77,7 +77,7 @@ const SignInForm: React.FC<SignInFormProps> = ({ onOtpSent }) => {
   };
 
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-2xl px-8 sm:px-12 py-12 sm:py-16 w-full max-w-sm transform transition-all duration-500 hover:shadow-3xl mx-auto">
+    <div className="bg-white rounded-[2.5rem] shadow-2xl px-8 sm:px-12 py-12 sm:py-16 w-full max-w-sm transform transition-all duration-500 hover:shadow-3xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="flex items-center justify-center gap-3 mb-10">
         <SignInIcon className="w-8 h-8 text-blue-500" />
         <h1 className="text-3xl font-bold text-blue-500">Sign in</h1>

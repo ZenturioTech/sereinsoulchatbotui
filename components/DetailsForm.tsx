@@ -12,6 +12,18 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ onSubmit }) => {
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
+    // Load Poppins font from Google Fonts
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
+
+  useEffect(() => {
     if (name || age || gender) {
       setIsDirty(true);
     } else {
@@ -29,14 +41,14 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ onSubmit }) => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-8 rounded-3xl shadow-lg bg-white font-poppins">
+    <div className="w-full max-w-md mx-auto p-8 rounded-3xl shadow-lg bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <div className="text-center mb-8">
-        <h1 className="text-xl font-bold text-gray-800">Tell us more about you</h1>
+        <h1 className="text-xl  text-gray-800">Tell us more about you</h1>
         <p className="text-gray-400">This will help us personalize your experience.</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="name" className="block text-gray-700 text-sm font-bold mb-2">
+          <label htmlFor="name" className="block text-gray-700 text-sm  mb-2">
             Name (Optional)
           </label>
           <input
@@ -49,7 +61,7 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ onSubmit }) => {
           />
         </div>
         <div>
-          <label htmlFor="age" className="block text-gray-700 text-sm font-bold mb-2">
+          <label htmlFor="age" className="block text-gray-700 text-sm mb-2">
             Age (Optional)
           </label>
           <input
@@ -62,7 +74,7 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ onSubmit }) => {
           />
         </div>
         <div>
-          <label htmlFor="gender" className="block text-gray-700 text-sm font-bold mb-2">
+          <label htmlFor="gender" className="block text-gray-700 text-sm mb-2">
             Gender (Optional)
           </label>
           <select
@@ -80,7 +92,7 @@ const DetailsForm: React.FC<DetailsFormProps> = ({ onSubmit }) => {
         <div>
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-3xl focus:outline-none focus:shadow-outline transition duration-300"
+            className=" font-semibold w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-3xl focus:outline-none focus:shadow-outline transition duration-300"
           >
             {isDirty ? 'Continue' : 'Skip'}
           </button>

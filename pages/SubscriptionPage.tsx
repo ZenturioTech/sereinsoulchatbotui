@@ -100,7 +100,7 @@ const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ onBackToChat }) => 
     const buttonClasses = "mt-10 w-full bg-white bg-opacity-20 backdrop-blur-sm text-white font-bold py-4 px-4 rounded-full text-lg group-hover:bg-opacity-100 group-hover:bg-white group-hover:text-blue-500 transition-colors duration-300 text-center block";
 
     return (
-        <div className="min-h-screen bg-[#f0f4f8] font-sans">
+        <div className="min-h-screen bg-[#f0f4f8]" style={{ fontFamily: "'Poppins', sans-serif" }}>
             <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
                  {/* ... (header remains the same) */}
                 <header className="flex justify-between items-center mb-12">
@@ -134,8 +134,8 @@ const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ onBackToChat }) => 
 
                                      {/* Separator */}
                                      <div className="relative my-8">
-                                         <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white"></div>
-                                         <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white"></div>
+                                         <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#f0f4f8]"></div>
+                                         <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#f0f4f8]"></div>
                                          <div className="mx-8 border-t-2 border-dashed border-white/30"></div>
                                      </div>
 
