@@ -249,7 +249,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
     // --- Handle New Chat Button (modified to call fetchHistory) ---
     const handleNewChat = async () => {
         console.log("Starting new chat session...");
-        const oldSessionId = currentSessionId;
         const phoneNumber = localStorage.getItem('phoneNumber');
         const newSessionId = generateSessionId(phoneNumber);
 
@@ -270,14 +269,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token }) => {
         }
 
         try {
-            const apiBase = (import.meta as any).env.VITE_API_BASE_URL;
-            // Call backend to clear the *old* session history (fire and forget, or await)
-            await fetch(`${apiBase}/api/chat/new`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'x-api-key': GATEKEEPER_API_KEY },
-                body: JSON.stringify({ sessionId: oldSessionId })
-            });
-
             // Fetch history for the *new* session (which will return the initial greeting from backend)
             await fetchHistory(newSessionId); // This will set messages and stop loading
 
