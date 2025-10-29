@@ -1,6 +1,6 @@
 // seri-docker/sereinsoulchatbotui-main/components/admin/tabs/SummaryTab.tsx
-import React, { useState, useMemo } from 'react'; // <-- Import useMemo
-import { UserProfile, EditHistoryEntry } from '../../../types/UserProfile'; // <-- Import EditHistoryEntry
+import React, { useState, useMemo } from 'react';
+import { UserProfile, EditHistoryEntry } from '../../../types/UserProfile';
 import EditableTextArea from '../helpers/EditableTextArea';
 
 const RefreshIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -51,40 +51,42 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
         }
     };
 
-    // --- NEW: Format timestamp helper ---
     const formatTimestamp = (isoString?: string): string => {
         if (!isoString) return 'Invalid Date';
         try {
-            return new Date(isoString).toLocaleString('en-IN', { // Indian locale example
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
+            return new Date(isoString).toLocaleString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: 'numeric', minute: '2-digit', hour12: true
             });
-        } catch {
-            return 'Invalid Date';
-        }
+        } catch { return 'Invalid Date'; }
     };
-    // ---------------------------------
 
-    // --- NEW: Filter and sort edit history for this tab ---
     const relevantHistory = useMemo(() => {
         return (profile.editHistory || [])
             .filter(entry => entry.field === 'summary' || entry.field === 'notes')
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort descending (newest first)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [profile.editHistory]);
-    // ----------------------------------------------------
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                     {/* Summary Area */}
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="text-sm font-medium text-gray-600">Summary</label>
-                        <button
+                    {/* --- REMOVED extra label, MOVED button below --- */}
+                    {summaryError && <p className="text-red-500 text-xs mt-1 mb-2">{summaryError}</p>}
+                    <EditableTextArea
+                        label="Summary" // Label is now correctly handled by EditableTextArea
+                        value={profile.summary}
+                        fieldName="summary"
+                        rows={8}
+                        profileId={profile._id}
+                        token={token}
+                        onProfileUpdate={onProfileUpdate}
+                        isEditable={false} // Summary is display-only
+                    />
+                    {/* --- MOVED Button Below Text Area --- */}
+                    <div className="flex justify-end mt-2">
+                         <button
                             onClick={handleGenerateSummary}
                             disabled={isSummarizing}
                             className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-full border transition-colors ${
@@ -97,16 +99,7 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                             {isSummarizing ? 'Generating...' : 'Regenerate Summary'}
                         </button>
                     </div>
-                     {summaryError && <p className="text-red-500 text-xs mt-1 mb-2">{summaryError}</p>}
-                    <EditableTextArea
-                        label=""
-                        value={profile.summary}
-                        fieldName="summary"
-                        rows={8}
-                        profileId={profile._id}
-                        token={token}
-                        onProfileUpdate={onProfileUpdate}
-                    />
+                     {/* ----------------------------------- */}
                 </div>
                 <div>
                     {/* Notes Area */}
@@ -118,11 +111,12 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                         profileId={profile._id}
                         token={token}
                         onProfileUpdate={onProfileUpdate}
+                        // isEditable defaults to true
                     />
                 </div>
             </div>
 
-            {/* --- UPDATED: Edit History Display --- */}
+            {/* Edit History Display */}
             <div>
                 <h3 className="text-sm font-medium text-gray-600 mb-2 border-t pt-4">Edit History (Summary & Notes)</h3>
                 <div className="bg-gray-50 rounded p-4 h-40 w-full overflow-y-auto border border-gray-200 space-y-2">
@@ -139,7 +133,6 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                     )}
                 </div>
             </div>
-            {/* ------------------------------------- */}
         </div>
     );
 };
