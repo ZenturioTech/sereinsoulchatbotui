@@ -1,7 +1,15 @@
 // seri-docker/sereinsoulchatbotui-main/types/UserProfile.tsx
-// Define the structure matching the user_profile collection
+
+// --- NEW: Define structure for history entry ---
+export interface EditHistoryEntry {
+    field: string; // e.g., 'summary', 'notes'
+    timestamp: string; // ISO date string
+    admin: string; // Admin's phone number
+}
+// ------------------------------------------
+
 export interface UserProfile {
-    _id: string; // MongoDB default ID
+    _id: string;
     phoneNumber: string;
     name?: string | null;
     age?: number | null;
@@ -14,13 +22,12 @@ export interface UserProfile {
     familyStructure?: string | null;
     livingArrangement?: string | null;
     familyBonding?: string | null;
-    
-    // --- NEW: Add summary and notes fields ---
     summary?: string | null;
     notes?: string | null;
-
-    // --- NEW: Add IP and Location fields ---
     ipAddress?: string | null;
-    location?: any | null; // Store the full location object from the API
-    // ... add any other fields stored in user_profile
+    location?: any | null;
+
+    // --- NEW: Add editHistory array ---
+    editHistory?: EditHistoryEntry[];
+    // ----------------------------------
 }

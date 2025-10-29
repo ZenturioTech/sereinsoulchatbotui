@@ -1,9 +1,8 @@
 // seri-docker/sereinsoulchatbotui-main/components/admin/tabs/SummaryTab.tsx
-import React, { useState } from 'react'; // <-- Import useState
-import { UserProfile } from '../../../types/UserProfile';
+import React, { useState, useMemo } from 'react'; // <-- Import useMemo
+import { UserProfile, EditHistoryEntry } from '../../../types/UserProfile'; // <-- Import EditHistoryEntry
 import EditableTextArea from '../helpers/EditableTextArea';
 
-// Simple Refresh Icon
 const RefreshIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -16,16 +15,12 @@ interface TabProps {
     token: string;
     onProfileUpdate: (updatedProfile: UserProfile) => void;
 }
-// --- NEW: Add API Key ---
 const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
 
 const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => {
-    // --- NEW: State for summary generation ---
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
-    // ----------------------------------------
 
-    // --- NEW: Function to handle summary generation ---
     const handleGenerateSummary = async () => {
         setIsSummarizing(true);
         setSummaryError(null);
@@ -35,10 +30,9 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json', // Added Content-Type
+                    'Content-Type': 'application/json',
                     'x-api-key': GATEKEEPER_API_KEY
                 },
-                // No body needed for this POST request
             });
 
             if (!response.ok) {
@@ -47,18 +41,41 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
             }
 
             const updatedProfile: UserProfile = await response.json();
-            onProfileUpdate(updatedProfile); // Update parent state with the new profile (containing the summary)
+            onProfileUpdate(updatedProfile);
 
         } catch (err: any) {
             console.error('Summary generation error:', err);
             setSummaryError(err.message || 'An unexpected error occurred during summarization.');
-            // Optionally update the UI immediately with the error, though the backend tries too
-            // onProfileUpdate({ ...profile, summary: `Error: ${err.message}` });
         } finally {
             setIsSummarizing(false);
         }
     };
-    // -----------------------------------------------
+
+    // --- NEW: Format timestamp helper ---
+    const formatTimestamp = (isoString?: string): string => {
+        if (!isoString) return 'Invalid Date';
+        try {
+            return new Date(isoString).toLocaleString('en-IN', { // Indian locale example
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch {
+            return 'Invalid Date';
+        }
+    };
+    // ---------------------------------
+
+    // --- NEW: Filter and sort edit history for this tab ---
+    const relevantHistory = useMemo(() => {
+        return (profile.editHistory || [])
+            .filter(entry => entry.field === 'summary' || entry.field === 'notes')
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort descending (newest first)
+    }, [profile.editHistory]);
+    // ----------------------------------------------------
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
@@ -67,7 +84,6 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                     {/* Summary Area */}
                     <div className="flex justify-between items-center mb-1">
                         <label className="text-sm font-medium text-gray-600">Summary</label>
-                         {/* --- NEW: Generate Summary Button --- */}
                         <button
                             onClick={handleGenerateSummary}
                             disabled={isSummarizing}
@@ -80,13 +96,10 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                              <RefreshIcon className={`w-3 h-3 ${isSummarizing ? 'animate-spin' : ''}`} />
                             {isSummarizing ? 'Generating...' : 'Regenerate Summary'}
                         </button>
-                         {/* ------------------------------------ */}
                     </div>
-                     {/* --- Display Summary Error --- */}
                      {summaryError && <p className="text-red-500 text-xs mt-1 mb-2">{summaryError}</p>}
-                     {/* --------------------------- */}
                     <EditableTextArea
-                        label="" // Label is now above
+                        label=""
                         value={profile.summary}
                         fieldName="summary"
                         rows={8}
@@ -96,7 +109,7 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                     />
                 </div>
                 <div>
-                    {/* Notes Area (No changes needed here) */}
+                    {/* Notes Area */}
                     <EditableTextArea
                         label="Notes"
                         value={profile.notes}
@@ -108,13 +121,25 @@ const SummaryTab: React.FC<TabProps> = ({ profile, token, onProfileUpdate }) => 
                     />
                 </div>
             </div>
-            {/* Edit History (No changes needed here) */}
+
+            {/* --- UPDATED: Edit History Display --- */}
             <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Edit History</h3>
-                <div className="bg-gray-100 rounded p-4 h-40 w-full overflow-y-auto border border-gray-200">
-                    <p className="text-sm text-gray-500">No edit history available.</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-2 border-t pt-4">Edit History (Summary & Notes)</h3>
+                <div className="bg-gray-50 rounded p-4 h-40 w-full overflow-y-auto border border-gray-200 space-y-2">
+                    {relevantHistory.length > 0 ? (
+                        relevantHistory.map((entry, index) => (
+                            <div key={index} className="text-xs text-gray-700 border-b border-gray-200 pb-1 mb-1 last:border-b-0">
+                                <span className="font-medium capitalize">{entry.field}</span> updated on{' '}
+                                <span className="text-gray-900">{formatTimestamp(entry.timestamp)}</span>
+                                {' '}by <span className="text-gray-900">{entry.admin}</span>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-gray-500 italic">No edit history available for Summary or Notes.</p>
+                    )}
                 </div>
             </div>
+            {/* ------------------------------------- */}
         </div>
     );
 };
