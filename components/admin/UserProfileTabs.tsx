@@ -1,33 +1,43 @@
+// seri-docker/sereinsoulchatbotui-main/components/admin/UserProfileTabs.tsx
 import React, { useState } from 'react';
 import { UserProfile } from '../../types/UserProfile';
 import BasicInfoTab from './tabs/BasicInfoTab';
 import PersonalDetailsTab from './tabs/PersonalDetailsTab';
 import FamilyInfoTab from './tabs/FamilyInfoTab';
 import SummaryTab from './tabs/SummaryTab';
+import AnalyzesTab from './tabs/AnalyzesTab'; // Ensure this is imported
 
 interface UserProfileTabsProps {
     profile: UserProfile;
+    token: string;
+    onProfileUpdate: (updatedProfile: UserProfile) => void;
 }
 
 type TabName = 'basic' | 'personal' | 'family' | 'summary' | 'analyzes' | 'empty';
 
-const UserProfileTabs: React.FC<UserProfileTabsProps> = ({ profile }) => {
+const UserProfileTabs: React.FC<UserProfileTabsProps> = ({ profile, token, onProfileUpdate }) => {
     const [activeTab, setActiveTab] = useState<TabName>('basic');
 
     const renderTabContent = () => {
+        const commonProps = {
+            profile: profile,
+            token: token,
+            onProfileUpdate: onProfileUpdate
+        };
+
         switch (activeTab) {
             case 'basic':
-                return <BasicInfoTab profile={profile} />;
+                return <BasicInfoTab {...commonProps} />;
             case 'personal':
-                return <PersonalDetailsTab profile={profile} />;
+                return <PersonalDetailsTab {...commonProps} />;
             case 'family':
-                return <FamilyInfoTab profile={profile} />;
+                return <FamilyInfoTab {...commonProps} />;
             case 'summary':
-                return <SummaryTab profile={profile} />;
+                return <SummaryTab {...commonProps} />;
             case 'analyzes':
-                return <div className="bg-white p-6 rounded-lg shadow-sm h-96">Analyzes Content...</div>;
+                return <AnalyzesTab {...commonProps} />; // Render the AnalyzesTab
             case 'empty':
-                return <div className="bg-white p-6 rounded-lg shadow-sm h-96">Empty Content...</div>;
+                return <div className="bg-white p-6 rounded-lg shadow-sm h-96">Empty Content...</div>; // Adjust height as needed
             default:
                 return null;
         }
@@ -48,8 +58,10 @@ const UserProfileTabs: React.FC<UserProfileTabsProps> = ({ profile }) => {
 
     return (
         <div className="w-full">
-            <h1 className="text-2xl font-semibold text-gray-800 mb-4">USER PROFILE DETAILS</h1>
-            
+             <div className="flex justify-between items-center mb-4">
+                 <h1 className="text-2xl font-semibold text-gray-800">USER PROFILE DETAILS</h1>
+             </div>
+
             {/* Tab Navigation */}
             <nav className="flex space-x-2 mb-4">
                 <TabButton name="basic" label="Basic Information" />

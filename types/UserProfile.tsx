@@ -1,3 +1,4 @@
+// seri-docker/sereinsoulchatbotui-main/types/UserProfile.tsx
 // Define the structure matching the user_profile collection
 export interface UserProfile {
     _id: string; // MongoDB default ID
@@ -13,5 +14,9 @@ export interface UserProfile {
     familyStructure?: string | null;
     livingArrangement?: string | null;
     familyBonding?: string | null;
+    
+    // --- NEW: Add summary and notes fields ---
+    summary?: string | null;
+    notes?: string | null;
     // ... add any other fields stored in user_profile
 }
