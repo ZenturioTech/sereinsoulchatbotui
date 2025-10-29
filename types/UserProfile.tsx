@@ -18,5 +18,9 @@ export interface UserProfile {
     // --- NEW: Add summary and notes fields ---
     summary?: string | null;
     notes?: string | null;
+
+    // --- NEW: Add IP and Location fields ---
+    ipAddress?: string | null;
+    location?: any | null; // Store the full location object from the API
     // ... add any other fields stored in user_profile
 }
