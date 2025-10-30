@@ -140,14 +140,18 @@ const App: React.FC = () => {
     }
   };
 
+  // --- **** MODIFIED: handleSignOut **** ---
   const handleSignOut = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('phoneNumber');
-    localStorage.removeItem('activeChatSessionId');
+    // --- REMOVED THIS LINE ---
+    // localStorage.removeItem('activeChatSessionId'); 
+    // -------------------------
     setToken(null);
     setIsAdmin(false); // Reset admin state on logout
     navigate('home');
   };
+  // ---------------------------------------
 
   const handleUpgrade = () => {
     navigate('subscription');
