@@ -1,6 +1,7 @@
 // seri-docker/sereinsoulchatbotui-main/components/admin/AdminDashboardView.tsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { UserProfile } from '../../types/UserProfile'; // Import UserProfile type
+import ChevronDownIcon from '../icons/ChevronDownIcon'; // Import icon
 
 // --- Icons (Keep these as they are) ---
 const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -34,6 +35,18 @@ interface AdminDashboardViewProps {
 type UserFilterType = 'all' | 'named' | 'unnamed';
 type GenderFilterType = 'all' | 'male' | 'female' | 'other' | 'unspecified';
 
+// --- Define categories for grouping ---
+type DateGroup = 'today' | 'yesterday' | 'lastWeek' | 'lastMonth' | 'lastYear' | 'older';
+interface GroupedProfiles {
+    today: UserProfile[];
+    yesterday: UserProfile[];
+    lastWeek: UserProfile[];
+    lastMonth: UserProfile[];
+    lastYear: UserProfile[];
+    older: UserProfile[];
+}
+// ------------------------------------------
+
 const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoading, onSelectProfile }) => {
     // Filter States
     const [searchText, setSearchText] = useState('');
@@ -59,7 +72,7 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
         return () => document.removeEventListener('mousedown', handleClickOutside);
       }, []);
 
-    // Filtering Logic
+    // Filtering Logic (No changes)
     const filteredProfiles = useMemo(() => {
         const searchTerm = searchText.toLowerCase().trim();
         const minAgeNum = parseInt(minAgeFilter, 10);
@@ -88,29 +101,54 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
         });
     }, [profiles, searchText, userTypeFilter, minAgeFilter, maxAgeFilter, genderFilter]);
 
-    // --- CORRECTED: UserItem component ---
-    const UserItem: React.FC<{profile: UserProfile}> = ({ profile }) => {
-        // Helper function to get value or 'N/A'
-        const getValue = (value: string | number | null | undefined): string | number => {
-            // // REMOVED THIS LINE: Ensure boolean false isn't treated as empty
-            // if (value === false) return String(value);
+    // --- Grouping logic (No changes) ---
+    const groupedProfiles = useMemo(() => {
+        const now = new Date();
+        const todayStart = new Date(now.setHours(0, 0, 0, 0));
+        const yesterdayStart = new Date(new Date(todayStart).setDate(todayStart.getDate() - 1));
+        const lastWeekStart = new Date(new Date(todayStart).setDate(todayStart.getDate() - 7));
+        const lastMonthStart = new Date(new Date(todayStart).setMonth(todayStart.getMonth() - 1));
+        const lastYearStart = new Date(new Date(todayStart).setFullYear(todayStart.getFullYear() - 1));
 
-            // Ensure number 0 isn't treated as empty
-             if (value === 0) return String(value); // Keep this check for age 0
-
-            // Treat null, undefined, or empty/whitespace string as N/A
-            return (value === null || value === undefined || String(value).trim() === '') ? 'N/A' : value;
+        const groups: GroupedProfiles = {
+            today: [],
+            yesterday: [],
+            lastWeek: [],
+            lastMonth: [],
+            lastYear: [],
+            older: []
         };
 
-        const displayName = profile.name || profile.phoneNumber;
-        const displayPhone = profile.name ? profile.phoneNumber : null; // Only show phone separately if name exists
+        for (const profile of filteredProfiles) {
+            const profileDate = new Date((profile as any).lastUpdatedAt || (profile as any).createdAt || '1970-01-01T00:00:00.000Z');
+            if (isNaN(profileDate.getTime())) {
+                groups.older.push(profile);
+                continue;
+            }
+            if (profileDate >= todayStart) groups.today.push(profile);
+            else if (profileDate >= yesterdayStart) groups.yesterday.push(profile);
+            else if (profileDate >= lastWeekStart) groups.lastWeek.push(profile);
+            else if (profileDate >= lastMonthStart) groups.lastMonth.push(profile);
+            else if (profileDate >= lastYearStart) groups.lastYear.push(profile);
+            else groups.older.push(profile);
+        }
+        return groups;
+    }, [filteredProfiles]);
+    // ----------------------------
 
+    // --- UserItem component (No changes) ---
+    const UserItem: React.FC<{profile: UserProfile}> = ({ profile }) => {
+        const getValue = (value: string | number | null | undefined): string | number => {
+             if (value === 0) return String(value);
+             return (value === null || value === undefined || String(value).trim() === '') ? 'N/A' : value;
+        };
+        const displayName = profile.name || profile.phoneNumber;
+        const displayPhone = profile.name ? profile.phoneNumber : null;
         return (
             <button
                 onClick={() => onSelectProfile(profile)}
-                className="w-full text-left p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 focus:outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 transition-colors duration-150 block mb-2 shadow-sm min-h-[6rem] flex flex-col justify-between" // Adjust min-h-[6rem] (or h-[6rem]) as needed
+                className="w-full text-left p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 focus:outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 transition-colors duration-150 block mb-2 shadow-sm min-h-[6rem] flex flex-col justify-between"
             >
-                {/* Top part: Name/Phone */}
                 <div>
                     <p className="text-sm font-semibold text-gray-800 truncate mb-0.5">
                         {displayName}
@@ -119,8 +157,6 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
                         <p className="text-xs text-gray-600 truncate">{displayPhone}</p>
                     )}
                 </div>
-
-                {/* Bottom part: Age/Gender */}
                  <p className="text-xs text-gray-500 truncate mt-1">
                     Age: {getValue(profile.age)} | Gender: {getValue(profile.gender)}
                 </p>
@@ -129,14 +165,68 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
     };
     // -----------------------------------
 
-    const PlaceholderRow = () => <div className="h-16 bg-gray-200 rounded-lg w-full animate-pulse mb-2"></div>; // Adjusted placeholder
+    // --- UPDATED: Collapsible Group Component ---
+    const GroupedUserList: React.FC<{ title: string; profiles: UserProfile[] }> = ({ title, profiles }) => {
+        // Default to open, except for "Older" and "Last Year"
+        const [isOpen, setIsOpen] = useState(title !== 'Older' && title !== 'Last Year');
+        // --- NEW: State for expanding beyond 6 users ---
+        const [isExpanded, setIsExpanded] = useState(false);
 
-    // Split profiles for three columns
-    const columns = 3;
-    const itemsPerColumn = Math.ceil(filteredProfiles.length / columns);
-    const columnProfiles = Array.from({ length: columns }, (_, colIndex) =>
-        filteredProfiles.slice(colIndex * itemsPerColumn, (colIndex + 1) * itemsPerColumn)
-    );
+        if (profiles.length === 0) return null;
+
+        const hasMore = profiles.length > 6;
+        // --- NEW: Show only 6 unless expanded ---
+        const visibleProfiles = isExpanded ? profiles : profiles.slice(0, 6);
+
+        return (
+            <div className="mb-2">
+                {/* Main collapsible header */}
+                <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="flex items-center w-full text-left px-2 py-1.5 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-300"
+                    aria-expanded={isOpen}
+                >
+                    <ChevronDownIcon
+                        className={`w-4 h-4 mr-2 text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
+                    />
+                    <span className="text-sm font-semibold text-gray-800">{title}</span>
+                    <span className="text-sm text-gray-500 ml-2">({profiles.length})</span>
+                </button>
+
+                {/* Content: grid + show all button */}
+                {isOpen && (
+                    <div className="pt-2 pl-4 border-l-2 border-gray-200 ml-3.5 mt-1">
+                        
+                        {/* --- NEW: 3-Column Grid for visible items --- */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0">
+                            {visibleProfiles.map((profile) => (
+                                // This wrapper is needed for the grid layout
+                                <div className="space-y-0" key={profile._id}>
+                                    <UserItem profile={profile} />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* --- NEW: "Show all" button --- */}
+                        {hasMore && (
+                            <div className="pl-1 pt-2">
+                                <button
+                                    onClick={() => setIsExpanded(!isExpanded)}
+                                    className="text-xs font-medium text-blue-600 hover:underline focus:outline-none"
+                                >
+                                    {isExpanded ? 'Show less' : `Show all ${profiles.length - 6} more...`}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+    // --------------------------------------
+
+    // --- UPDATED: Placeholder row to use grid ---
+    const PlaceholderRow = () => <div className="h-24 bg-gray-200 rounded-lg w-full animate-pulse mb-2"></div>;
 
     const resetFilters = () => {
         setUserTypeFilter('all');
@@ -152,13 +242,11 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm flex flex-col h-full">
              <h1 className="text-2xl font-semibold text-gray-800 mb-4 flex-shrink-0">USERS OVERVIEW</h1>
 
-            {/* Header with Search/Filter */}
+            {/* Header with Search/Filter (No changes) */}
             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-200 flex-shrink-0 relative">
-                {/* Menu Icon */}
                 <button className="p-2 text-gray-600 hover:bg-gray-100 rounded" aria-label="Menu">
                     <MenuIcon className="w-5 h-5" />
                 </button>
-                {/* Search Input */}
                 <div className="flex-grow relative">
                     <input
                         type="text"
@@ -172,7 +260,6 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
                         <SearchIcon className="w-5 h-5" />
                     </div>
                 </div>
-                {/* Filter Button */}
                 <button
                     id="filter-button"
                     onClick={() => setShowFilters(!showFilters)}
@@ -186,10 +273,9 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
                     Filter {filtersActive && <span className="w-2 h-2 bg-blue-500 rounded-full"></span>}
                 </button>
 
-                {/* Filter Dropdown */}
+                {/* Filter Dropdown (No changes) */}
                 {showFilters && (
                      <div ref={filterDropdownRef} className="absolute top-full right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-10 p-4 animate-fadeIn">
-                        {/* ... (Filter controls - no changes needed here) ... */}
                         <div className="flex justify-between items-center mb-3">
                             <h4 className="text-sm font-semibold text-gray-700">Filters</h4>
                             <button onClick={() => setShowFilters(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
@@ -229,29 +315,30 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
                 )}
             </div>
 
-            {/* Scrollable Content Area */}
-            {/* --- UPDATED: Grid now has 3 columns --- */}
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar"> {/* Added custom-scrollbar class */}
+            {/* --- UPDATED Scrollable Content Area --- */}
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                  {isLoading ? (
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"> {/* Changed to lg:grid-cols-3 */}
-                        {[...Array(3)].map((_, colIndex) => ( // Render 3 placeholder columns
-                             <div className="space-y-1 p-2" key={`loadCol-${colIndex}`}>
-                                {Array.from({ length: 10 }).map((_, index) => <PlaceholderRow key={`load-${colIndex}-${index}`} />)}
+                    // --- UPDATED: Show loading placeholder in a grid ---
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0 px-1">
+                        {Array.from({ length: 15 }).map((_, index) => (
+                            <div className="space-y-0" key={`load-${index}`}>
+                                <PlaceholderRow />
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0"> {/* Changed to lg:grid-cols-3 */}
-                         {/* Map over the columns */}
-                        {columnProfiles.map((col, colIndex) => (
-                             <div className="space-y-0" key={`col-${colIndex}`}> {/* Removed space-y-1, mb-2 on UserItem handles spacing */}
-                                {col.map((profile) => <UserItem key={profile._id} profile={profile} />)}
-                            </div>
-                        ))}
+                    <div className="px-1">
+                        {/* Render the new grouped lists */}
+                        <GroupedUserList title="Today" profiles={groupedProfiles.today} />
+                        <GroupedUserList title="Yesterday" profiles={groupedProfiles.yesterday} />
+                        <GroupedUserList title="Last Week" profiles={groupedProfiles.lastWeek} />
+                        <GroupedUserList title="Last Month" profiles={groupedProfiles.lastMonth} />
+                        <GroupedUserList title="Last Year" profiles={groupedProfiles.lastYear} />
+                        <GroupedUserList title="Older" profiles={groupedProfiles.older} />
 
                         {/* Message if filters/search yield no results */}
                          {filteredProfiles.length === 0 && !isLoading && (
-                            <p className="text-sm text-gray-500 p-4 text-center col-span-1 md:col-span-2 lg:col-span-3"> {/* Span all columns */}
+                            <p className="text-sm text-gray-500 p-4 text-center">
                                 {profiles.length === 0 ? 'No users found.' : 'No users match the current filters.'}
                             </p>
                          )}
@@ -285,6 +372,10 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                     background: #a8a8a8;
+                }
+                /* --- NEW: Transition for chevron rotation --- */
+                .transition-transform {
+                    transition-property: transform;
                 }
             `}</style>
         </div>
