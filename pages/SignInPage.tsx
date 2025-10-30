@@ -8,7 +8,11 @@ import SereinSoulLogo from '../components/icons/SereinSoulLogo';
 
 interface SignInPageProps {
   onSignInSuccess: (token: string) => void;
-}const formVariants = {
+  // --- THIS LINE IS A FIX for a pre-existing bug in your file ---
+  onAdminSignInSuccess: (token: string) => void; 
+}
+
+const formVariants = {
   initial: { opacity: 0, y: 20 },
   in: { opacity: 1, y: 0 },
   out: { opacity: 0, y: -20 },
@@ -23,48 +27,56 @@ const formTransition = {
 
 const GATEKEEPER_API_KEY = (import.meta as any).env.VITE_GATEKEEPER_API_KEY;
 
-const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess, onAdminSignInSuccess }) => { // <-- Add new prop
+// --- MODIFIED: Ensure onAdminSignInSuccess is destructured ---
+const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess, onAdminSignInSuccess }) => { 
   const [step, setStep] = useState<'signIn' | 'otp' | 'terms' | 'details'>('signIn');
   const [mobileNumber, setMobileNumber] = useState('');
   const [error, setError] = useState('');
-  const [isAdminLogin, setIsAdminLogin] = useState(false); // <-- NEW: State to track admin status
+  const [isAdminLogin, setIsAdminLogin] = useState(false); 
 
   const handleOtpSent = (number: string) => {
     setMobileNumber(number);
     setStep('otp'); // This should change the view to OtpForm
   };
-  // --- MODIFIED: handleVerify ---
-  const handleVerify = (token: string, isAdmin: boolean) => { // Receive isAdmin flag
-    console.log(`OTP Verified! Admin: ${isAdmin}. Storing token.`);
+  
+  // --- **** MODIFIED: handleVerify **** ---
+  // Now accepts isNewUser flag
+  const handleVerify = (token: string, isAdmin: boolean, isNewUser: boolean) => { 
+    console.log(`OTP Verified! Admin: ${isAdmin}, NewUser: ${isNewUser}. Storing token.`);
     localStorage.setItem('authToken', token);
     localStorage.setItem('phoneNumber', `+91${mobileNumber}`);
     setIsAdminLogin(isAdmin); // Store admin status
 
-    // Decide next step based on admin status
+    // Decide next step based on admin status AND new user status
     if (isAdmin) {
       console.log("Admin user detected, skipping terms/details, calling onAdminSignInSuccess.");
       onAdminSignInSuccess(token); // Redirect admin immediately
+    
+    } else if (isNewUser) {
+      console.log("New regular user, proceeding to terms.");
+      setStep('terms'); // NEW regular users go to terms
+    
     } else {
-      console.log("Regular user, proceeding to terms.");
-      setStep('terms'); // Regular users go to terms
+      console.log("Existing regular user, skipping terms/details, calling onSignInSuccess.");
+      onSignInSuccess(token); // EXISTING regular users go straight to chat
     }
   };
-  // -----------------------------
+  // ------------------------------------
   
   const handleContinue = () => {
     console.log('Terms Agreed! Proceeding to details form.');
-    setStep('details'); // <-- NEW: Go to details form after terms
+    setStep('details');
   }
 
-  // --- NEW: Handler for the details form submission ---
+  // --- (No changes to handleDetailsSubmit) ---
   const handleDetailsSubmit = async (details: { name?: string; age?: number; gender?: string }) => {
     console.log('Submitting user details:', details);
-    setError(''); // Clear previous errors
+    setError(''); 
     
     const token = localStorage.getItem('authToken');
     if (!token) {
         setError('Authentication error. Please sign in again.');
-        setStep('signIn'); // Go back to login on error
+        setStep('signIn');
         return;
     }
 
@@ -93,7 +105,6 @@ const SignInPage: React.FC<SignInPageProps> = ({ onSignInSuccess, onAdminSignInS
     } catch (err: any) {
         console.error('Error submitting details:', err);
         setError(err.message || 'An unexpected error occurred.');
-        // Optionally, you can keep the user on the details page to retry
     }
   };
   // ----------------------------------------------------

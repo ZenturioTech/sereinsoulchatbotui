@@ -3,7 +3,8 @@ import OtpIcon from './icons/OtpIcon';
 
 interface OtpFormProps {
   mobileNumber: string;
-  onVerify: (token: string, isAdmin: boolean) => void;
+  // --- MODIFIED: Add isNewUser to the onVerify signature ---
+  onVerify: (token: string, isAdmin: boolean, isNewUser: boolean) => void;
   onBack: () => void;
 }
 
@@ -28,6 +29,7 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
       return;
     }
     setError(null);
+    setIsLoading(true); // Start loading
     // Use the VITE_API_URL defined in App.tsx context or .env
     const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8080';
     try {
@@ -43,8 +45,12 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
       }
 
       const data = await res.json();
-      // Pass the received token back through the onVerify function
-      onVerify(data.token, data.isAdmin || false); // MODIFIED LINE
+      
+      // --- MODIFIED: Pass the new isNewUser flag back ---
+      // data.isNewUser might be undefined if backend is old, so default to true
+      const isNewUser = data.isNewUser === undefined ? true : data.isNewUser;
+      onVerify(data.token, data.isAdmin || false, isNewUser); 
+      // ---------------------------------------------------
 
     } catch (err: any) {
       setError(err?.message || 'Invalid or expired OTP');
@@ -89,9 +95,9 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-full hover:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
+          className={`w-full text-white font-semibold py-3 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 shadow-lg ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 shadow-blue-500/30 hover:shadow-blue-500/50'}`}
         >
-          Verify & Proceed
+          {isLoading ? 'Verifying...' : 'Verify & Proceed'}
         </button>
       </form>
 
@@ -103,23 +109,27 @@ const OtpForm: React.FC<OtpFormProps> = ({ mobileNumber, onVerify, onBack }) => 
             className="font-semibold text-blue-500 hover:underline"
             onClick={async () => {
               setError(null);
-              const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+              setIsLoading(true); // Show loading on resend
+              const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080';
               try {
                 const res = await fetch(`${apiBase}/api/auth/otp/send`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', 'x-api-key': GATEKEEPER_API_KEY },
                   body: JSON.stringify({ phone_number: `+91${mobileNumber}` })
                 });
                 if (!res.ok) {
-                  const msg = await res.text();
-                  throw new Error(msg || 'Failed to resend OTP');
+                  const errorData = await res.json();
+                  throw new Error(errorData.error || 'Failed to resend OTP');
                 }
+                // Optionally show a success message "OTP resent!"
               } catch (err: any) {
                 setError(err?.message || 'Failed to resend OTP');
+              } finally {
+                setIsLoading(false); // Stop loading
               }
             }}
           >
-            Resend OTP
+            {isLoading ? 'Sending...' : 'Resend OTP'}
           </button>
         </p>
         <button onClick={onBack} className="mt-4 font-semibold text-gray-600 hover:underline">
