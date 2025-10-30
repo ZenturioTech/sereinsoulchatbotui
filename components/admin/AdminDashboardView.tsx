@@ -136,27 +136,36 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
     }, [filteredProfiles]);
     // ----------------------------
 
-    // --- UserItem component (No changes) ---
+    // --- **** MODIFIED: UserItem component **** ---
     const UserItem: React.FC<{profile: UserProfile}> = ({ profile }) => {
+        // Helper function to get value or 'N/A'
         const getValue = (value: string | number | null | undefined): string | number => {
+            // Ensure number 0 isn't treated as empty
              if (value === 0) return String(value);
-             return (value === null || value === undefined || String(value).trim() === '') ? 'N/A' : value;
+            // Treat null, undefined, or empty/whitespace string as N/A
+            return (value === null || value === undefined || String(value).trim() === '') ? 'N/A' : value;
         };
-        const displayName = profile.name || profile.phoneNumber;
-        const displayPhone = profile.name ? profile.phoneNumber : null;
+
+        // --- UPDATED LOGIC ---
+        const displayName = getValue(profile.name); // Use getValue to get "N/A" if name is missing/empty
+        const displayPhone = profile.phoneNumber;   // Always get the phone number
+        // --- END UPDATED LOGIC ---
+
         return (
             <button
                 onClick={() => onSelectProfile(profile)}
                 className="w-full text-left p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 focus:outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 transition-colors duration-150 block mb-2 shadow-sm min-h-[6rem] flex flex-col justify-between"
             >
+                {/* Top part: Name/Phone */}
                 <div>
                     <p className="text-sm font-semibold text-gray-800 truncate mb-0.5">
-                        {displayName}
+                        {displayName} {/* This will now be "N/A" or the actual name */}
                     </p>
-                    {displayPhone && (
-                        <p className="text-xs text-gray-600 truncate">{displayPhone}</p>
-                    )}
+                    {/* Always render the phone number */}
+                    <p className="text-xs text-gray-600 truncate">{displayPhone}</p>
                 </div>
+
+                {/* Bottom part: Age/Gender */}
                  <p className="text-xs text-gray-500 truncate mt-1">
                     Age: {getValue(profile.age)} | Gender: {getValue(profile.gender)}
                 </p>
@@ -165,22 +174,18 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
     };
     // -----------------------------------
 
-    // --- UPDATED: Collapsible Group Component ---
+    // --- Collapsible Group Component (No changes from previous step) ---
     const GroupedUserList: React.FC<{ title: string; profiles: UserProfile[] }> = ({ title, profiles }) => {
-        // Default to open, except for "Older" and "Last Year"
         const [isOpen, setIsOpen] = useState(title !== 'Older' && title !== 'Last Year');
-        // --- NEW: State for expanding beyond 6 users ---
         const [isExpanded, setIsExpanded] = useState(false);
 
         if (profiles.length === 0) return null;
 
         const hasMore = profiles.length > 6;
-        // --- NEW: Show only 6 unless expanded ---
         const visibleProfiles = isExpanded ? profiles : profiles.slice(0, 6);
 
         return (
             <div className="mb-2">
-                {/* Main collapsible header */}
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     className="flex items-center w-full text-left px-2 py-1.5 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-300"
@@ -193,21 +198,15 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
                     <span className="text-sm text-gray-500 ml-2">({profiles.length})</span>
                 </button>
 
-                {/* Content: grid + show all button */}
                 {isOpen && (
                     <div className="pt-2 pl-4 border-l-2 border-gray-200 ml-3.5 mt-1">
-                        
-                        {/* --- NEW: 3-Column Grid for visible items --- */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0">
                             {visibleProfiles.map((profile) => (
-                                // This wrapper is needed for the grid layout
                                 <div className="space-y-0" key={profile._id}>
                                     <UserItem profile={profile} />
                                 </div>
                             ))}
                         </div>
-
-                        {/* --- NEW: "Show all" button --- */}
                         {hasMore && (
                             <div className="pl-1 pt-2">
                                 <button
@@ -225,7 +224,6 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
     };
     // --------------------------------------
 
-    // --- UPDATED: Placeholder row to use grid ---
     const PlaceholderRow = () => <div className="h-24 bg-gray-200 rounded-lg w-full animate-pulse mb-2"></div>;
 
     const resetFilters = () => {
@@ -318,7 +316,6 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
             {/* --- UPDATED Scrollable Content Area --- */}
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                  {isLoading ? (
-                    // --- UPDATED: Show loading placeholder in a grid ---
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0 px-1">
                         {Array.from({ length: 15 }).map((_, index) => (
                             <div className="space-y-0" key={`load-${index}`}>
