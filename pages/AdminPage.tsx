@@ -144,12 +144,16 @@ const AdminPage: React.FC<AdminPageProps> = ({ token, onSignOut }) => {
                             onProfileUpdate={handleProfileUpdate}
                         />
                     ) : (
-                        // Show dashboard view if no profile is selected
-                        <AdminDashboardView
-                            profiles={profiles}
-                            isLoading={isLoading}
-                            onSelectProfile={setSelectedProfile} // Pass the state setter
-                        />
+                        // --- MODIFIED: Added h1 title here ---
+                        <>
+                            <h1 className="text-2xl font-semibold text-gray-800 mb-4">USERS OVERVIEW</h1>
+                            <AdminDashboardView
+                                profiles={profiles}
+                                isLoading={isLoading}
+                                onSelectProfile={setSelectedProfile} // Pass the state setter
+                            />
+                        </>
+                        // ------------------------------------
                     )}
                 </div>
             </main>

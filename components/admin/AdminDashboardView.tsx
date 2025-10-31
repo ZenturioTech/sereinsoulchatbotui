@@ -136,7 +136,7 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
     }, [filteredProfiles]);
     // ----------------------------
 
-    // --- **** MODIFIED: UserItem component **** ---
+    // --- UserItem component (No changes) ---
     const UserItem: React.FC<{profile: UserProfile}> = ({ profile }) => {
         // Helper function to get value or 'N/A'
         const getValue = (value: string | number | null | undefined): string | number => {
@@ -146,27 +146,25 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
             return (value === null || value === undefined || String(value).trim() === '') ? 'N/A' : value;
         };
 
-        // --- UPDATED LOGIC ---
         const displayName = getValue(profile.name); // Use getValue to get "N/A" if name is missing/empty
         const displayPhone = profile.phoneNumber;   // Always get the phone number
-        // --- END UPDATED LOGIC ---
 
         return (
             <button
                 onClick={() => onSelectProfile(profile)}
-                className="w-full text-left p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 focus:outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 transition-colors duration-150 block mb-2 shadow-sm min-h-[6rem] flex flex-col justify-between"
+                // --- MODIFIED: Removed min-h-[6rem] and justify-between ---
+                className="w-full text-left p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 focus:outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 transition-colors duration-150 block mb-2 shadow-sm flex flex-col"
             >
                 {/* Top part: Name/Phone */}
                 <div>
                     <p className="text-sm font-semibold text-gray-800 truncate mb-0.5">
                         {displayName} {/* This will now be "N/A" or the actual name */}
                     </p>
-                    {/* Always render the phone number */}
                     <p className="text-xs text-gray-600 truncate">{displayPhone}</p>
                 </div>
 
                 {/* Bottom part: Age/Gender */}
-                 <p className="text-xs text-gray-500 truncate mt-1">
+                 <p className="text-xs text-gray-500 truncate mt-1"> {/* mt-1 provides a small gap */}
                     Age: {getValue(profile.age)} | Gender: {getValue(profile.gender)}
                 </p>
             </button>
@@ -174,7 +172,7 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
     };
     // -----------------------------------
 
-    // --- Collapsible Group Component (No changes from previous step) ---
+    // --- Collapsible Group Component (No changes) ---
     const GroupedUserList: React.FC<{ title: string; profiles: UserProfile[] }> = ({ title, profiles }) => {
         const [isOpen, setIsOpen] = useState(title !== 'Older' && title !== 'Last Year');
         const [isExpanded, setIsExpanded] = useState(false);
@@ -224,7 +222,7 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
     };
     // --------------------------------------
 
-    const PlaceholderRow = () => <div className="h-24 bg-gray-200 rounded-lg w-full animate-pulse mb-2"></div>;
+    const PlaceholderRow = () => <div className="h-20 bg-gray-200 rounded-lg w-full animate-pulse mb-2"></div>;
 
     const resetFilters = () => {
         setUserTypeFilter('all');
@@ -238,7 +236,9 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
 
     return (
         <div className="bg-white p-4 md:p-6 rounded-lg shadow-sm flex flex-col h-full">
-             <h1 className="text-2xl font-semibold text-gray-800 mb-4 flex-shrink-0">USERS OVERVIEW</h1>
+            
+            {/* --- THIS H1 WAS REMOVED --- */}
+            {/* <h1 className="text-2xl font-semibold text-gray-800 mb-4 flex-shrink-0">USERS OVERVIEW</h1> */}
 
             {/* Header with Search/Filter (No changes) */}
             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-200 flex-shrink-0 relative">
@@ -313,7 +313,7 @@ const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ profiles, isLoa
                 )}
             </div>
 
-            {/* --- UPDATED Scrollable Content Area --- */}
+            {/* --- Scrollable Content Area (No changes) --- */}
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                  {isLoading ? (
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0 px-1">
