@@ -416,17 +416,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                     }
                 }
                 // Regular text
-                else if (line.trim() && !line.startsWith('*')) {
-                    elements.push(
-                        <p key={`text-${idx}`} className="text-[15px] mb-1">{line}</p>
-                    );
+                else if (line.trim()) {
+                    // Remove asterisks and any markdown formatting from the line
+                    const cleanedLine = line.replace(/[\*_]+/g, '').trim();
+                    if (cleanedLine) {
+                        elements.push(
+                            <p key={`text-${idx}`} className="text-[15px] mb-1">{cleanedLine}</p>
+                        );
+                    }
                 }
             });
             
             return <div className="space-y-1">{elements}</div>;
         }
 
-        return <p className="text-[15px] break-words">{content}</p>;
+        // Clean markdown formatting from content before displaying
+        const cleanContent = content.replace(/[\*_]+/g, '');
+        return <p className="text-[15px] break-words">{cleanContent}</p>;
     };
 
     const handleMessageClick = (index: number) => {
