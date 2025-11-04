@@ -62,7 +62,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
         if (!sessionIdToFetch) {
             console.warn("fetchHistory called without a sessionId");
             setIsHistoryLoading(false);
-            setMessages([{ role: 'assistant', content: "Hi there! I'm Seri. Just want you to know I'm here for you. Feel free to share whatever's on your mind." }]);
+            // No longer set welcome message here
+            setMessages([]);
             return;
         }
         console.log(`Fetching chat history for session: ${sessionIdToFetch}`);
@@ -75,7 +76,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
             const response = await fetch(`${apiBase}/api/chat/history?sessionId=${encodeURIComponent(sessionIdToFetch)}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'x-api-key': GATEKEEPER_API_KEY
                 }
             });
             // ------------------------------------------
@@ -86,22 +86,24 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
             }
 
             const history: Message[] = await response.json();
+            
+            // --- MODIFICATION ---
+            // Simply set the history, even if it's an empty array.
+            // The hardcoded welcome message will be handled by the JSX.
+            setMessages(history);
             if (history.length > 0) {
-                 setMessages(history);
                  console.log(`Loaded ${history.length} messages for session ${sessionIdToFetch}.`);
             } else {
-                 // This case is now handled by the backend returning a welcome message
-                 console.log(`No history found for session ${sessionIdToFetch}, backend should send greeting.`);
-                 // We still set messages just in case backend sends empty array
-                 if (history.length === 0) {
-                    setMessages([{ role: 'assistant', content: "Hi there! I'm Seri. Just want you to know I'm here for you. Feel free to share whatever's on your mind." }]);
-                 }
+                 // This is now the expected behavior for a new chat
+                 console.log(`No history found for session ${sessionIdToFetch}. Displaying static greeting.`);
             }
+            // --- END MODIFICATION ---
 
         } catch (err: any) {
             console.error("Error fetching history:", err);
             setError("Could not load messages for this session.");
-            setMessages([{ role: 'assistant', content: "Sorry, couldn't load messages. How can I help now?", isError: true }]);
+            // No longer set welcome message here, just let the error show
+            setMessages([]);
         } finally {
             setIsHistoryLoading(false);
         }
@@ -190,12 +192,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
 
         // Prevent sending messages if offline
         if (!isOnline) {
-            setMessages([{ role: 'assistant', content: "I'm sleeping, come back later -Your Seri" }]);
+            // --- MODIFICATION ---
+            // Set an error message in the 'messages' state
+            setError("I'm sleeping, come back later -Your Seri");
+            // Do not clear existing messages
+            // setMessages([{ role: 'assistant', content: "I'm sleeping, come back later -Your Seri" }]);
             return;
         }
 
         const userMessage: Message = { role: 'user', content: message };
+        // --- MODIFICATION ---
+        // The `messages` state *only* contains real history.
+        // This is correct. The static welcome message is not in the state.
         const currentMessages = [...messages, userMessage];
+        // --- END MODIFICATION ---
 
         // Update UI immediately
         setMessages(currentMessages);
@@ -218,7 +228,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                     'x-api-key': GATEKEEPER_API_KEY
                 },
                 body: JSON.stringify({
-                    messages: currentMessages,
+                    messages: currentMessages, // This correctly sends *only* actual history
                     sessionId: currentSessionId
                 })
             });
@@ -311,16 +321,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
 
         if (!isOnline) {
             setIsHistoryLoading(false);
-            setMessages([{ role: 'assistant', content: "I'm sleeping, come back later -Your Seri" }]);
+            // setMessages([]); // No need to set offline message, static greeting will show
             return;
         }
 
         try {
+            // This will now fetch an empty history []
             await fetchHistory(newSessionId);
         } catch (err) {
             console.error("Failed to start new chat:", err);
             setError("Could not start a new chat session.");
-            setMessages([{ role: 'assistant', content: "Okay, let's start fresh. What's on your mind?" }]);
+            setMessages([]); // Set to empty on error
             setIsHistoryLoading(false);
         }
         // --- End existing logic ---
@@ -416,23 +427,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                     }
                 }
                 // Regular text
-                else if (line.trim()) {
-                    // Remove asterisks and any markdown formatting from the line
-                    const cleanedLine = line.replace(/[\*_]+/g, '').trim();
-                    if (cleanedLine) {
-                        elements.push(
-                            <p key={`text-${idx}`} className="text-[15px] mb-1">{cleanedLine}</p>
-                        );
-                    }
+                else if (line.trim() && !line.startsWith('*')) {
+                    elements.push(
+                        <p key={`text-${idx}`} className="text-[15px] mb-1">{line}</p>
+                    );
                 }
             });
             
             return <div className="space-y-1">{elements}</div>;
         }
 
-        // Clean markdown formatting from content before displaying
-        const cleanContent = content.replace(/[\*_]+/g, '');
-        return <p className="text-[15px] break-words">{cleanContent}</p>;
+        return <p className="text-[15px] break-words">{content}</p>;
     };
 
     const handleMessageClick = (index: number) => {
@@ -538,49 +543,73 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                  {isHistoryLoading && isOnline && <div className="text-center text-gray-500 py-4">Loading messages...</div>}
                  {!isHistoryLoading && error && <div className="text-center text-red-500 py-4">{error}</div>}
 
-                {/* Display Messages with iMessage-style animations */}
-                {!isHistoryLoading && !isInitialCheck && isOnline && messages.map((msg, index) => {
-                    const isLastUserMessage = msg.role === 'user' && index === messages.length - 1;
-                    const isExpanded = expandedMessageIndex === index;
-                    
-                    return (
+                {/* --- MODIFICATION: Display Messages --- */}
+                {!isHistoryLoading && !isInitialCheck && isOnline && (
+                    <>
+                        {/* 1. Hardcoded Welcome Message (Always shows) */}
                         <div 
-                            key={`${currentSessionId}-${msg.role}-${index}-${msg.content.slice(0, 10)}`}
-                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} relative transition-all duration-300`}
+                            className="flex justify-start"
                             style={{
-                                animation: `${msg.role === 'user' ? 'popInFromInput' : 'slideInLeft'} 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`,
+                                animation: 'slideInLeft 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
                                 opacity: 0,
-                                animationDelay: isLastUserMessage ? '0s' : `${Math.min(index * 0.05, 0.3)}s`,
-                                zIndex: isExpanded ? 1000 : 1,
-                                filter: expandedMessageIndex !== null && !isExpanded ? 'blur(4px)' : 'none',
-                                pointerEvents: expandedMessageIndex !== null && !isExpanded ? 'none' : 'auto'
+                                animationDelay: '0s' // Show immediately
                             }}
                         >
                             <div 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleMessageClick(index);
-                                }}
-                                className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl transition-all duration-300 cursor-pointer ${
-                                     msg.role === 'user'
-                                        ? 'bg-blue-500 text-white rounded-br-none shadow-md hover:shadow-lg'
-                                        : msg.isError
-                                        ? 'bg-red-100 text-red-700 rounded-bl-none border border-red-200 shadow-md hover:shadow-lg'
-                                        : 'bg-white text-gray-800 rounded-bl-none border border-gray-300 shadow-md hover:shadow-lg'
-                                }`}
-                                style={{
-                                    transform: isExpanded ? 'scale(1.15)' : 'scale(1)',
-                                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                    boxShadow: isExpanded 
-                                        ? '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 12px 24px -8px rgba(0, 0, 0, 0.15)'
-                                        : undefined
-                                }}
+                                className="max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl bg-white text-gray-800 rounded-bl-none border border-gray-300 shadow-md"
                             >
-                                {formatMessageContent(msg.content)}
+                                <p className="text-[15px] break-words">Hi there! I'm Seri. Just want you to know I'm here for you. Feel free to share whatever's on your mind.</p>
                             </div>
                         </div>
-                    );
-                })}
+
+                        {/* 2. Mapped History Messages (From state) */}
+                        {messages.map((msg, index) => {
+                            const isLastUserMessage = msg.role === 'user' && index === messages.length - 1;
+                            const isExpanded = expandedMessageIndex === index;
+                            
+                            return (
+                                <div 
+                                    key={`${currentSessionId}-${msg.role}-${index}-${msg.content.slice(0, 10)}`}
+                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} relative transition-all duration-300`}
+                                    style={{
+                                        animation: `${msg.role === 'user' ? 'popInFromInput' : 'slideInLeft'} 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards`,
+                                        opacity: 0,
+                                        // Adjust animation delay to account for the static message
+                                        animationDelay: isLastUserMessage ? '0s' : `${Math.min((index + 1) * 0.05, 0.3)}s`,
+                                        zIndex: isExpanded ? 1000 : 1,
+                                        filter: expandedMessageIndex !== null && !isExpanded ? 'blur(4px)' : 'none',
+                                        pointerEvents: expandedMessageIndex !== null && !isExpanded ? 'none' : 'auto'
+                                    }}
+                                >
+                                    <div 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMessageClick(index);
+                                        }}
+                                        className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2 rounded-2xl transition-all duration-300 cursor-pointer ${
+                                             msg.role === 'user'
+                                                ? 'bg-blue-500 text-white rounded-br-none shadow-md hover:shadow-lg'
+                                                : msg.isError
+                                                ? 'bg-red-100 text-red-700 rounded-bl-none border border-red-200 shadow-md hover:shadow-lg'
+                                                : 'bg-white text-gray-800 rounded-bl-none border border-gray-300 shadow-md hover:shadow-lg'
+                                        }`}
+                                        style={{
+                                            transform: isExpanded ? 'scale(1.15)' : 'scale(1)',
+                                            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                            boxShadow: isExpanded 
+                                                ? '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 12px 24px -8px rgba(0, 0, 0, 0.15)'
+                                                : undefined
+                                        }}
+                                    >
+                                        {formatMessageContent(msg.content)}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </>
+                )}
+                {/* --- END MODIFICATION --- */}
+
 
                 {/* Typing Indicator with smooth animation */}
                 {isLoading && (
