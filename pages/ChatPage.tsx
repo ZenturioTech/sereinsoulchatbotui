@@ -363,11 +363,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
      const handleTakePhotoClick = () => cameraInputRef.current?.click();
      const handleEmojiClick = (emoji: string) => setMessage(prev => prev + emoji);
 
-     // Format message content with proper UI components
+     // ====================================================================
+     // --- RENDER FIX: This function is modified to parse '*' correctly ---
+     // ====================================================================
      const formatMessageContent = (content: string) => {
-        // Check if message contains support information
-        const phonePattern = /(\d{2}-\d{10}|\d{10})/g;
+        
+        // --- MODIFIED: More flexible regex to test for phone numbers ---
+        const phonePattern = /([\d-]{10,})/g; // Looser test for any long digit/dash string
         const urlPattern = /(https?:\/\/[^\s]+)/g;
+        // -----------------------------------------------------------
+
         const hasPhones = phonePattern.test(content);
         const hasUrls = urlPattern.test(content);
 
@@ -376,10 +381,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
             const elements: React.ReactElement[] = [];
             
             lines.forEach((line, idx) => {
-                // Check for phone numbers
-                const phoneMatch = line.match(/([A-Za-z\s]+):\s*(\d{2}-\d{10}|\d{10})/);
+
+                // --- MODIFIED: Regex handles optional leading '*', whitespace, and varied phone formats ---
+                const phoneMatch = line.match(/^\s*\*?\s*([^:]+?):\s*([\d\s-]+)$/);
+                
+                // --- MODIFIED: Regex handles optional leading '*' and whitespace ---
+                const urlMatch = line.match(/^\s*\*?\s*([^:]+?):\s*(https?:\/\/[^\s]+)$/);
+
                 if (phoneMatch) {
-                    const [, name, phone] = phoneMatch;
+                    // Use map(trim) to clean up capture groups
+                    const [, name, phone] = phoneMatch.map(s => s ? s.trim() : '');
                     elements.push(
                         <div key={`phone-${idx}`} className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 mb-2 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-200">
                             <div className="flex-1">
@@ -387,7 +398,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                                 <div className="text-sm font-mono text-green-900">{phone}</div>
                             </div>
                             <a
-                                href={`tel:${phone.replace(/-/g, '')}`}
+                                href={`tel:${phone.replace(/[-\s]/g, '')}`} // Clean phone for tel link
                                 onClick={(e) => e.stopPropagation()}
                                 className="ml-3 bg-green-500 hover:bg-green-600 text-white rounded-full p-2 transition-all duration-200 transform hover:scale-110 active:scale-95 shadow-md"
                                 aria-label={`Call ${name}`}
@@ -400,45 +411,49 @@ const ChatPage: React.FC<ChatPageProps> = ({ onUpgrade, token, onBackToHome }) =
                     );
                 }
                 // Check for URLs
-                else if (line.match(urlPattern)) {
-                    const urlMatch = line.match(/([^:]+):\s*(https?:\/\/[^\s]+)/);
-                    if (urlMatch) {
-                        const [, label, url] = urlMatch;
-                        elements.push(
-                            <a
-                                key={`url-${idx}`}
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="block bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-2 hover:shadow-md transition-all duration-200 hover:border-blue-300 group"
-                            >
-                                <div className="flex items-center">
-                                    <svg className="w-4 h-4 text-blue-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-xs font-semibold text-blue-800 mb-0.5">{label}</div>
-                                        <div className="text-xs text-blue-600 truncate group-hover:text-blue-700">{url}</div>
-                                    </div>
+                else if (urlMatch) {
+                     // Use map(trim) to clean up capture groups
+                    const [, label, url] = urlMatch.map(s => s ? s.trim() : '');
+                    elements.push(
+                        <a
+                            key={`url-${idx}`}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="block bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mb-2 hover:shadow-md transition-all duration-200 hover:border-blue-300 group"
+                        >
+                            <div className="flex items-center">
+                                <svg className="w-4 h-4 text-blue-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-semibold text-blue-800 mb-0.5">{label}</div>
+                                    <div className="text-xs text-blue-600 truncate group-hover:text-blue-700">{url}</div>
                                 </div>
-                            </a>
-                        );
-                    }
+                            </div>
+                        </a>
+                    );
                 }
-                // Regular text
-                else if (line.trim() && !line.startsWith('*')) {
+                // --- MODIFIED: Render any other non-empty line ---
+                else if (line.trim()) {
                     elements.push(
                         <p key={`text-${idx}`} className="text-[15px] mb-1">{line}</p>
                     );
                 }
+                // Empty lines are automatically skipped
             });
             
             return <div className="space-y-1">{elements}</div>;
         }
 
+        // Fallback for simple messages
         return <p className="text-[15px] break-words">{content}</p>;
     };
+    // ====================================================================
+    // --- END OF RENDER FIX ---
+    // ====================================================================
+
 
     const handleMessageClick = (index: number) => {
         setExpandedMessageIndex(expandedMessageIndex === index ? null : index);
